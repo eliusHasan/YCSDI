@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { Facebook, Linkedin, Twitter, Youtube, Mail, Send, ShieldCheck, ArrowRight } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
+import { Mail, Send, ShieldCheck, ArrowRight, Globe, Share2, MessageSquare, Play } from "lucide-react";
 
 const quickLinks = [
   { label: "Our Programs", href: "/courses" },
@@ -10,10 +10,10 @@ const quickLinks = [
 ];
 
 const socialLinks = [
-  { icon: Facebook, href: "#", label: "Facebook" },
-  { icon: Linkedin, href: "#", label: "LinkedIn" },
-  { icon: Twitter, href: "#", label: "Twitter" },
-  { icon: Youtube, href: "#", label: "YouTube" },
+  { icon: Globe, href: "#", label: "Facebook" },
+  { icon: Share2, href: "#", label: "LinkedIn" },
+  { icon: MessageSquare, href: "#", label: "Twitter" },
+  { icon: Play, href: "#", label: "YouTube" },
 ];
 
 export function Footer() {
@@ -29,7 +29,7 @@ export function Footer() {
           
           {/* Brand & Mission */}
           <section>
-            <Link to="/" className="mb-8 inline-flex items-center gap-4 group">
+            <RouterLink to="/" className="mb-8 inline-flex items-center gap-4 group">
               <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-theme-soft text-sm font-black text-theme-dark transition-transform duration-500 group-hover:scale-110 shadow-lg shadow-theme-soft/20">
                 YCSDI
               </span>
@@ -37,7 +37,7 @@ export function Footer() {
                 Youth Career <br />
                 <span className="text-theme-soft italic">Academy.</span>
               </span>
-            </Link>
+            </RouterLink>
             <p className="max-w-xs text-sm leading-relaxed text-white/50 mb-8 font-medium">
               A premier institution dedicated to bridge the gap between education and 
               industry requirements through practical skills and professional training.
@@ -54,27 +54,30 @@ export function Footer() {
             <ul className="grid gap-4 p-0 text-sm font-semibold">
               {quickLinks.map((link) => (
                 <li key={link.href}>
-                  <Link className="text-white/60 transition-colors hover:text-white flex items-center gap-2 group" to={link.href}>
+                  <RouterLink className="text-white/60 transition-colors hover:text-white flex items-center gap-2 group" to={link.href}>
                     <ArrowRight size={14} className="opacity-0 -translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0 text-theme-soft" />
                     {link.label}
-                  </Link>
+                  </RouterLink>
                 </li>
               ))}
             </ul>
           </section>
 
-          {/* Social Presence */}
+          {/* Social Presence (Vertical List) */}
           <section>
             <h3 className="mb-8 text-sm font-black uppercase tracking-[0.2em] text-theme-soft">Connect</h3>
-            <div className="flex flex-wrap gap-4">
+            <div className="grid gap-4">
               {socialLinks.map((social) => (
                 <a 
                   key={social.label}
                   href={social.href}
-                  className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 border border-white/10 text-white transition-all duration-300 hover:bg-theme-soft hover:text-theme-dark hover:-translate-y-1 hover:border-theme-soft"
+                  className="flex items-center gap-4 text-white/60 hover:text-white transition-all duration-300 group"
                   aria-label={social.label}
                 >
-                  <social.icon size={18} />
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 border border-white/10 group-hover:bg-theme-soft group-hover:text-theme-dark group-hover:border-theme-soft transition-all">
+                    <social.icon size={18} />
+                  </div>
+                  <span className="text-sm font-bold tracking-wide">{social.label}</span>
                 </a>
               ))}
             </div>
@@ -117,8 +120,8 @@ export function Footer() {
             <span className="sm:ml-2">All Rights Reserved.</span>
           </p>
           <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-white/30">
-            <Link to="#" className="hover:text-theme-soft transition-colors">Privacy Policy</Link>
-            <Link to="#" className="hover:text-theme-soft transition-colors">Terms of Service</Link>
+            <RouterLink to="#" className="hover:text-theme-soft transition-colors">Privacy Policy</RouterLink>
+            <RouterLink to="#" className="hover:text-theme-soft transition-colors">Terms of Service</RouterLink>
           </div>
         </div>
       </div>
