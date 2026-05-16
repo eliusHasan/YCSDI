@@ -1,0 +1,17 @@
+node_modules/
+.next/
+dist/
+coverage/
+.turbo/
+*.log
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+uploads/**
+!uploads/.gitkeep
+!uploads/**/.gitkeep

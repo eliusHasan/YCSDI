@@ -1,0 +1,9 @@
+{
+  "name": "ycsdi-mern-project",
+  "private": true,
+  "scripts": {
+    "frontend": "npm run dev --prefix frontend",
+    "backend": "npm run dev --prefix backend",
+    "install:all": "npm install --prefix frontend && npm install --prefix backend"
+  }
+}
