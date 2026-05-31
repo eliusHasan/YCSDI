@@ -1,19 +1,10 @@
-import { 
-  User, Mail, Phone, BookOpen, UserPlus, CheckCircle2, 
-  ShieldCheck, ArrowLeft, ArrowRight, Calendar, 
-  MapPin, IdCard, MessageSquare, Upload, Users, 
-  GraduationCap, Clock, Loader2
+import {
+  User, Mail, Phone, UserPlus, ArrowLeft, ArrowRight, Calendar,
+  MapPin, IdCard, MessageSquare, Upload, Users, Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, ChangeEvent, FormEvent } from "react";
 import { studentApi } from "../../services/api";
-
-const benefits = [
-  "Industry-leading curriculum",
-  "Professional certifications",
-  "Career & placement support",
-  "Project-based learning"
-];
 
 export function RegistrationPage() {
   const [loading, setLoading] = useState(false);
@@ -189,68 +180,23 @@ export function RegistrationPage() {
                 </div>
               </div>
 
-              {/* Course Information Section */}
+              {/* Identification (NID / Passport) */}
               <div className="space-y-6">
                 <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-                  <GraduationCap className="text-theme-soft" size={18} />
-                  <h2 className="text-xs font-black uppercase tracking-widest text-white/60">Course Information</h2>
+                  <IdCard className="text-theme-soft" size={18} />
+                  <h2 className="text-xs font-black uppercase tracking-widest text-white/60">Identification</h2>
                 </div>
-                
-                <div className="grid sm:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Select Course *</label>
-                    <div className="relative group/input">
-                      <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <select 
-                        name="course"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all appearance-none cursor-pointer" required>
-                        <option value="" className="bg-theme-dark">Select Course</option>
-                        <option value="se" className="bg-theme-dark">Software Engineering</option>
-                        <option value="cd" className="bg-theme-dark">Creative Design</option>
-                        <option value="dm" className="bg-theme-dark">Digital Marketing</option>
-                      </select>
-                    </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Session</label>
-                    <div className="relative group/input">
-                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <input 
-                        type="text" 
-                        name="session"
-                        placeholder="Write Session (e.g. 2024-25)"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Course Duration *</label>
-                    <div className="relative group/input">
-                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <select 
-                        name="courseDuration"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all appearance-none cursor-pointer" required>
-                        <option value="" className="bg-theme-dark">Select Duration</option>
-                        <option value="3m" className="bg-theme-dark">3 Months</option>
-                        <option value="6m" className="bg-theme-dark">6 Months</option>
-                        <option value="1y" className="bg-theme-dark">1 Year</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">NID / Passport Number</label>
-                    <div className="relative group/input">
-                      <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <input 
-                        type="text" 
-                        name="nidPassport"
-                        placeholder="NID or Passport Number"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
-                      />
-                    </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">NID / Passport Number</label>
+                  <div className="relative group/input">
+                    <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
+                    <input
+                      type="text"
+                      name="nidPassport"
+                      placeholder="NID or Passport Number (optional)"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
+                    />
                   </div>
                 </div>
               </div>

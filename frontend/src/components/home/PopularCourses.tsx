@@ -1,45 +1,39 @@
-import { ArrowRight, Clock, BarChart, Users, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart, Clock, Loader2, Sparkles, Tag } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { publicCourseApi, type Course } from "../../services/api";
 
-const courses = [
-  {
-    title: "Computer Office Application",
-    duration: "3 Months",
-    level: "Beginner",
-    students: "1.2k+",
-    category: "Office Productivity",
-    image: "/hero-technology1.jpg",
-  },
-  {
-    title: "Graphic Design",
-    duration: "4 Months",
-    level: "Intermediate",
-    students: "850+",
-    category: "Creative Arts",
-    image: "/hero-technology2.jpg",
-  },
-  {
-    title: "Web Development",
-    duration: "6 Months",
-    level: "Professional",
-    students: "2.1k+",
-    category: "Software Engineering",
-    image: "/hero-technology1.jpg",
-  },
-  {
-    title: "Digital Marketing",
-    duration: "3 Months",
-    level: "Career Focused",
-    students: "1.5k+",
-    category: "Marketing",
-    image: "/hero-technology2.jpg",
-  },
-];
+function formatPrice(n: number) {
+  return `${n.toLocaleString("en-BD")} BDT`;
+}
 
 export function PopularCourses() {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await publicCourseApi.list();
+        if (!cancelled) setCourses(data.slice(0, 4));
+      } catch {
+        // Silent fallback — popular section just hides on failure
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!loading && courses.length === 0) {
+    return null;
+  }
+
   return (
     <section className="relative bg-[#F9FBFC] py-20 lg:py-28 overflow-hidden">
-      {/* Decorative Background Elements */}
       <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-theme-soft/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-96 h-96 bg-theme-primary/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -55,87 +49,87 @@ export function PopularCourses() {
               <span className="text-theme-accent">professional training.</span>
             </h2>
             <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Our curriculum is designed by industry experts to ensure you gain the practical 
-              experience needed to excel in today's competitive job market.
+              Our curriculum is designed by industry experts to ensure you gain the practical experience needed to
+              excel in today's competitive job market.
             </p>
           </div>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {courses.map((course, index) => (
-            <article
-              key={course.title}
-              className="group relative flex flex-col bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 hover:shadow-[0_20px_50px_rgba(27,60,83,0.12)] hover:-translate-y-2"
-            >
-              {/* Image Container */}
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <img
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  src={course.image}
-                  alt={course.title}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-theme-dark/60 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
-                
-                {/* Category Badge */}
-                <div className="absolute top-4 left-4">
-                  <span className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md text-[10px] font-extrabold text-theme-dark uppercase tracking-wider shadow-sm">
-                    {course.category}
-                  </span>
-                </div>
-
-                {/* Index Number */}
-                <div className="absolute top-4 right-4 text-white/40 text-sm font-black italic">
-                  0{index + 1}
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex flex-col flex-1 p-7">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
-                    <Clock size={14} className="text-theme-soft" />
-                    {course.duration}
-                  </div>
-                  <div className="w-1 h-1 rounded-full bg-slate-200" />
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
-                    <BarChart size={14} className="text-theme-soft" />
-                    {course.level}
-                  </div>
-                </div>
-
-                <h3 className="text-xl font-black text-theme-dark leading-tight mb-4 group-hover:text-theme-primary transition-colors duration-300">
-                  {course.title}
-                </h3>
-
-                <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden">
-                          <Users size={12} className="text-slate-400" />
-                        </div>
-                      ))}
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="text-theme-accent animate-spin" size={36} />
+          </div>
+        ) : (
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            {courses.map((course, index) => (
+              <article
+                key={course._id}
+                className="group relative flex flex-col bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 hover:shadow-[0_20px_50px_rgba(27,60,83,0.12)] hover:-translate-y-2"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    src={course.imageUrl}
+                    alt={course.title}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-theme-dark/60 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+                  {course.category && (
+                    <div className="absolute top-4 left-4">
+                      <span className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md text-[10px] font-extrabold text-theme-dark uppercase tracking-wider shadow-sm">
+                        {course.category}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-bold text-slate-500">
-                      {course.students} Enrolled
-                    </span>
+                  )}
+                  <div className="absolute top-4 right-4 text-white/40 text-sm font-black italic">
+                    0{index + 1}
                   </div>
-
-                  <Link
-                    to="/registration"
-                    className="flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-50 text-theme-dark group-hover:bg-theme-soft group-hover:text-theme-dark transition-all duration-300"
-                  >
-                    <ArrowRight size={20} />
-                  </Link>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
+
+                <div className="flex flex-col flex-1 p-7">
+                  {(course.duration || course.level) && (
+                    <div className="flex items-center gap-4 mb-4 flex-wrap">
+                      {course.duration && (
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                          <Clock size={14} className="text-theme-soft" />
+                          {course.duration}
+                        </div>
+                      )}
+                      {course.duration && course.level && <div className="w-1 h-1 rounded-full bg-slate-200" />}
+                      {course.level && (
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                          <BarChart size={14} className="text-theme-soft" />
+                          {course.level}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <h3 className="text-xl font-black text-theme-dark leading-tight mb-4 group-hover:text-theme-primary transition-colors duration-300">
+                    {course.title}
+                  </h3>
+
+                  <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500">
+                      <Tag size={14} className="text-theme-soft" />
+                      <span>{formatPrice(course.offerPrice ?? course.price)}</span>
+                    </div>
+
+                    <Link
+                      to="/registration"
+                      className="flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-50 text-theme-dark group-hover:bg-theme-soft group-hover:text-theme-dark transition-all duration-300"
+                    >
+                      <ArrowRight size={20} />
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
 
         <div className="mt-20 text-center">
-          <Link 
-            to="/courses" 
+          <Link
+            to="/courses"
             className="group inline-flex items-center gap-4 text-lg font-black text-theme-dark hover:text-theme-primary transition-all duration-300"
           >
             <span>Explore All Courses</span>
@@ -148,4 +142,3 @@ export function PopularCourses() {
     </section>
   );
 }
-

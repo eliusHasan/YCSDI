@@ -1,6 +1,12 @@
-import { Route, Routes } from "react-router-dom";
-import { Footer } from "./components/layout/Footer";
-import Header from "./components/layout/Header";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { RequireAuth } from "./components/auth/RequireAuth";
+import { AdminLayout } from "./components/layout/AdminLayout";
+import { PublicShell } from "./components/layout/PublicShell";
+import { AdminCertificatesPage } from "./pages/admin/AdminCertificatesPage";
+import { AdminCoursesPage } from "./pages/admin/AdminCoursesPage";
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AdminInstitutesPage } from "./pages/admin/AdminInstitutesPage";
+import { AdminStaffPage } from "./pages/admin/AdminStaffPage";
 import { AboutPage } from "./pages/public/AboutPage";
 import { CoursesPage } from "./pages/public/CoursesPage";
 import { HomePage } from "./pages/public/HomePage";
@@ -9,26 +15,56 @@ import { NoticesPage } from "./pages/public/NoticesPage";
 import { RegistrationPage } from "./pages/public/RegistrationPage";
 import { ResultPage } from "./pages/public/ResultPage";
 import { VerifiedInstitutePage } from "./pages/public/VerifiedInstitutePage";
-import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { StaffDashboard } from "./pages/staff/StaffDashboard";
+import { StudentDashboard } from "./pages/student/StudentDashboard";
 
 export default function App() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/result" element={<ResultPage />} />
-          <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/verified-institute" element={<VerifiedInstitutePage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/notices" element={<NoticesPage />} />
-          <Route path="/registration" element={<RegistrationPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <Routes>
+      <Route element={<PublicShell />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/result" element={<ResultPage />} />
+        <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/verified-institute" element={<VerifiedInstitutePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/notices" element={<NoticesPage />} />
+        <Route path="/registration" element={<RegistrationPage />} />
+        <Route path="/login" element={<LoginPage />} />
+      </Route>
+
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth roles={["admin"]}>
+            <AdminLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<Navigate to="students" replace />} />
+        <Route path="students" element={<AdminDashboard />} />
+        <Route path="courses" element={<AdminCoursesPage />} />
+        <Route path="institutes" element={<AdminInstitutesPage />} />
+        <Route path="staff" element={<AdminStaffPage />} />
+        <Route path="certificates" element={<AdminCertificatesPage />} />
+      </Route>
+
+      <Route
+        path="/staff"
+        element={
+          <RequireAuth roles={["staff"]}>
+            <StaffDashboard />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/student"
+        element={
+          <RequireAuth roles={["student"]}>
+            <StudentDashboard />
+          </RequireAuth>
+        }
+      />
+    </Routes>
   );
 }

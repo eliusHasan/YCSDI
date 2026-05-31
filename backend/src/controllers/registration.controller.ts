@@ -1,47 +1,64 @@
-import { Request, Response } from 'express';
-import { Student } from '../models/Student.js';
+import type { Request, Response } from "express";
+import { Student } from "../models/Student.js";
+
+const ACCEPTED_FIELDS = [
+  "fullName",
+  "fatherName",
+  "motherName",
+  "gender",
+  "dateOfBirth",
+  "postOffice",
+  "upazilla",
+  "district",
+  "nidPassport",
+  "mobileNumber",
+  "email",
+  "message",
+] as const;
+
+function pickAccepted(body: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of ACCEPTED_FIELDS) {
+    if (body[key] !== undefined && body[key] !== "") {
+      out[key] = body[key];
+    }
+  }
+  return out;
+}
 
 export class RegistrationController {
   static async registerStudent(req: Request, res: Response) {
     try {
-      const studentData = req.body;
       const file = req.file;
-
       if (!file) {
-        return res.status(400).json({ message: 'Passport size photo is required' });
+        res.status(400).json({ message: "Passport size photo is required" });
+        return;
       }
 
-      // Generate a unique registration ID (e.g., YCSDI-2024-XXXX)
       const count = await Student.countDocuments();
       const year = new Date().getFullYear();
-      const registrationId = `YCSDI-${year}-${(count + 1).toString().padStart(4, '0')}`;
+      const registrationId = `YCSDI-${year}-${(count + 1).toString().padStart(4, "0")}`;
 
       const newStudent = new Student({
-        ...studentData,
-        photoUrl: file.path, // Cloudinary URL from multer-storage-cloudinary
+        ...pickAccepted(req.body ?? {}),
+        photoUrl: file.path,
         registrationId,
-        status: 'pending'
+        status: "pending",
       });
 
       await newStudent.save();
 
       res.status(201).json({
-        message: 'Registration successful! Your application is pending review.',
+        message: "Registration successful! Your application is pending review.",
         registrationId,
-        student: newStudent
+        student: newStudent,
       });
     } catch (error: any) {
-      console.error('Registration Error:', error);
-      res.status(500).json({ 
-        message: 'Failed to register student', 
-        error: error.message 
+      console.error("Registration Error:", error);
+      res.status(500).json({
+        message: "Failed to register student",
+        error: error.message,
       });
     }
-  }
-
-  // Admin method to approve and set credentials
-  static async approveStudent(req: Request, res: Response) {
-    // This will be implemented when admin dashboard is set up
-    // Logic: Create User, link to Student, update Student status to 'approved'
   }
 }
