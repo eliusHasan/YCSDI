@@ -5,6 +5,8 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
 import { healthRouter } from "./routes/health.routes.js";
+import { studentRoutes } from "./routes/student.routes.js";
+import { adminRoutes } from "./routes/admin.routes.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +31,9 @@ export function createApp() {
   );
 
   app.use("/api/v1/health", healthRouter);
+  app.use("/api/v1/students", studentRoutes);
+  app.use("/api/v1/admins", adminRoutes);
 
   return app;
 }
+
