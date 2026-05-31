@@ -9,6 +9,7 @@ import { NoticesPage } from "./pages/public/NoticesPage";
 import { RegistrationPage } from "./pages/public/RegistrationPage";
 import { ResultPage } from "./pages/public/ResultPage";
 import { VerifiedInstitutePage } from "./pages/public/VerifiedInstitutePage";
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/registration" element={<RegistrationPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>
       <Footer />
