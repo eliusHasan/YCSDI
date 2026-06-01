@@ -23,9 +23,35 @@ export function createApp() {
 
   app.use(helmet());
   app.use(compression());
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const netlifyPreviewHosts = allowedOrigins
+    .map((o) => {
+      try {
+        return new URL(o).hostname;
+      } catch {
+        return null;
+      }
+    })
+    .filter((h): h is string => !!h && h.endsWith(".netlify.app"));
+
   app.use(
     cors({
-      origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        try {
+          const host = new URL(origin).hostname;
+          if (netlifyPreviewHosts.some((h) => host.endsWith(`--${h}`) || host === h)) {
+            return callback(null, true);
+          }
+        } catch {
+          // fall through
+        }
+        return callback(new Error(`Origin ${origin} not allowed by CORS`));
+      },
       credentials: true,
     }),
   );
