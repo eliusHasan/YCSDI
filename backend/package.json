@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
+    "seed:admin:prod": "node dist/scripts/seed-admin.js",
     "lint": "eslint .",
     "test": "echo \"No tests configured yet\""
   },
