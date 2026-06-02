@@ -142,6 +142,8 @@ export interface Student {
   status: StudentStatus;
   registrationId: string;
   instituteId?: StudentInstituteRef;
+  preferredInstituteId?: StudentInstituteRef;
+  preferredCourseId?: { _id: string; title: string; slug: string };
   userId?: StudentUserRef;
   banned: boolean;
   createdAt: string;
@@ -324,6 +326,16 @@ export const courseApi = {
 export const publicCourseApi = {
   list: () => api.get<Course[]>("/public/courses"),
   getBySlug: (slug: string) => api.get<Course>(`/public/courses/${slug}`),
+};
+
+export interface PublicInstitute {
+  _id: string;
+  name: string;
+  code: string;
+}
+
+export const publicInstituteApi = {
+  list: () => api.get<PublicInstitute[]>("/public/institutes"),
 };
 
 export const staffStudentApi = {

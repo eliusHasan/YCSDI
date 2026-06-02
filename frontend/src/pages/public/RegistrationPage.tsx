@@ -1,58 +1,91 @@
 import {
   User, Mail, Phone, UserPlus, ArrowLeft, ArrowRight, Calendar,
-  MapPin, IdCard, MessageSquare, Upload, Users, Loader2
+  MapPin, IdCard, MessageSquare, Upload, Users, Loader2, BookOpen, Building2, GraduationCap
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, ChangeEvent, FormEvent } from "react";
-import { studentApi } from "../../services/api";
+import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { publicCourseApi, publicInstituteApi, studentApi, type Course, type PublicInstitute } from "../../services/api";
+import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { PhotoCropModal } from "../../components/ui/PhotoCropModal";
 
 export function RegistrationPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [institutes, setInstitutes] = useState<PublicInstitute[]>([]);
+  const [courseId, setCourseId] = useState("");
+  const [instituteId, setInstituteId] = useState("");
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    publicCourseApi.list().then((r) => setCourses(r.data)).catch(() => {});
+    publicInstituteApi.list().then((r) => setInstitutes(r.data)).catch(() => {});
+  }, []);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    console.log("File input changed");
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      console.log("File selected:", file.name, file.size, file.type);
-      setPhoto(file);
-      setPhotoPreview(URL.createObjectURL(file));
+    const file = e.target.files?.[0];
+    if (file) {
+      setCropSrc(URL.createObjectURL(file));
     }
+    // Reset so re-selecting the same file still fires onChange.
+    e.target.value = "";
+  };
+
+  const handleCropConfirm = (blob: Blob) => {
+    const file = new File([blob], "passport-photo.jpg", { type: "image/jpeg" });
+    setPhoto(file);
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(blob);
+    });
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+  };
+
+  const handleCropCancel = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Form submission started");
-    setLoading(true);
     setMessage(null);
 
+    if (!courseId) {
+      setMessage({ type: 'error', text: 'Please select a desired course' });
+      return;
+    }
+    if (!instituteId) {
+      setMessage({ type: 'error', text: 'Please select an institute' });
+      return;
+    }
+
+    setLoading(true);
+
     const formData = new FormData(e.currentTarget);
-    
+
     if (photo) {
       formData.set('photo', photo);
-      console.log("Photo added to formData:", photo.name);
     } else {
-      console.log("Photo missing from state");
       setMessage({ type: 'error', text: 'Please upload a photo' });
       setLoading(false);
       return;
     }
 
     try {
-      console.log("Sending request to backend...");
       const response = await studentApi.register(formData);
-      console.log("Response received:", response.data);
       setMessage({ type: 'success', text: response.data.message });
       (e.target as HTMLFormElement).reset();
       setPhoto(null);
       setPhotoPreview(null);
+      setCourseId("");
+      setInstituteId("");
     } catch (error: any) {
-      console.error("Registration error:", error);
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.message || 'Registration failed. Please try again.' 
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Registration failed. Please try again.'
       });
     } finally {
       setLoading(false);
@@ -176,6 +209,50 @@ export function RegistrationPage() {
                         />
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Program Selection */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                  <GraduationCap className="text-theme-soft" size={18} />
+                  <h2 className="text-xs font-black uppercase tracking-widest text-white/60">Program Selection</h2>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Desired Course *</label>
+                    <SearchableSelect
+                      name="preferredCourseId"
+                      value={courseId}
+                      onChange={setCourseId}
+                      options={courses.map((c) => ({ value: c._id, label: c.title }))}
+                      placeholder="Select a course"
+                      searchPlaceholder="Search course by name…"
+                      emptyText="No courses found"
+                      icon={BookOpen}
+                    />
+                    {courses.length === 0 && (
+                      <p className="text-[9px] font-bold text-white/30 ml-1 mt-1">No courses available right now.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Institute / Branch *</label>
+                    <SearchableSelect
+                      name="preferredInstituteId"
+                      value={instituteId}
+                      onChange={setInstituteId}
+                      options={institutes.map((i) => ({ value: i._id, label: `${i.code} — ${i.name}` }))}
+                      placeholder="Select an institute"
+                      searchPlaceholder="Search by code or name…"
+                      emptyText="No institutes found"
+                      icon={Building2}
+                    />
+                    {institutes.length === 0 && (
+                      <p className="text-[9px] font-bold text-white/30 ml-1 mt-1">No institutes available right now.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -315,7 +392,7 @@ export function RegistrationPage() {
                   <div className="relative group/file">
                     <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-white/10 rounded-2xl cursor-pointer bg-white/5 hover:bg-white/10 hover:border-theme-soft/50 transition-all overflow-hidden">
                       {photoPreview ? (
-                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <img src={photoPreview} alt="Preview" className="max-h-full max-w-full object-contain" />
                       ) : (
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="text-white/20 mb-2 group-hover/file:text-theme-soft transition-colors" size={24} />
@@ -369,6 +446,10 @@ export function RegistrationPage() {
           </div>
         </div>
       </div>
+
+      {cropSrc && (
+        <PhotoCropModal src={cropSrc} onCancel={handleCropCancel} onConfirm={handleCropConfirm} />
+      )}
     </main>
   );
 }

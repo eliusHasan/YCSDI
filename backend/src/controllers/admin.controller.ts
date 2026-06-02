@@ -33,6 +33,8 @@ export class AdminController {
   static async getAllStudents(_req: Request, res: Response) {
     const students = await Student.find()
       .populate("instituteId", "name code")
+      .populate("preferredInstituteId", "name code")
+      .populate("preferredCourseId", "title slug")
       .populate("userId", "userId role")
       .sort({ createdAt: -1 });
     res.status(200).json(students);

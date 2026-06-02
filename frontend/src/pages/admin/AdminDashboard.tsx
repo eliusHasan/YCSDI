@@ -84,7 +84,10 @@ export function AdminDashboard() {
 
   const handleApproveClick = (student: Student) => {
     setSelectedStudent(student);
-    setApproval(buildEmptyApproval(student.registrationId));
+    const prefilled = buildEmptyApproval(student.registrationId);
+    if (student.preferredInstituteId?._id) prefilled.instituteId = student.preferredInstituteId._id;
+    if (student.preferredCourseId?._id) prefilled.courseIds = [student.preferredCourseId._id];
+    setApproval(prefilled);
     setError(null);
     setShowModal(true);
   };

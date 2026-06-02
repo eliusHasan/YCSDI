@@ -9,6 +9,14 @@ export class InstituteController {
     res.status(200).json(institutes);
   }
 
+  // Public: active institutes only, minimal fields for the registration form.
+  static async publicList(_req: Request, res: Response) {
+    const institutes = await Institute.find({ status: "active" })
+      .select("name code")
+      .sort({ name: 1 });
+    res.status(200).json(institutes);
+  }
+
   static async get(req: Request, res: Response) {
     const { id } = req.params;
     if (!isValidObjectId(id)) {

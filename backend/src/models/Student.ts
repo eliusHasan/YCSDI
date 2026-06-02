@@ -19,6 +19,8 @@ export interface IStudent extends Document {
   status: StudentStatus;
   registrationId: string;
   instituteId?: Types.ObjectId;
+  preferredInstituteId?: Types.ObjectId;
+  preferredCourseId?: Types.ObjectId;
   userId?: Types.ObjectId;
   banned: boolean;
   createdAt: Date;
@@ -43,6 +45,8 @@ const studentSchema = new Schema<IStudent>(
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", index: true },
     registrationId: { type: String, unique: true, index: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute" },
+    preferredInstituteId: { type: Schema.Types.ObjectId, ref: "Institute" },
+    preferredCourseId: { type: Schema.Types.ObjectId, ref: "Course" },
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     banned: { type: Boolean, default: false, index: true },
   },
