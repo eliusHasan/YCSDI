@@ -341,7 +341,8 @@ function GenerateModal({
   const approvedStudents = students.filter((s) => s.status === "approved" && !s.banned);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-theme-dark/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
       <div className="relative w-full max-w-lg bg-theme-dark border border-white/10 rounded-[32px] p-8 shadow-2xl my-8">
         <button
           onClick={onClose}
@@ -421,6 +422,7 @@ function GenerateModal({
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

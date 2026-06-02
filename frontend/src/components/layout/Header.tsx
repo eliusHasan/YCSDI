@@ -1,8 +1,9 @@
 // components/layout/Header.tsx
 
-import { Menu, Mail, Phone, X, ShieldCheck, ChevronDown } from "lucide-react";
+import { Menu, Mail, Phone, X, ShieldCheck, ChevronDown, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
+import { useAuthStore, type Role } from "../../stores/auth";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -12,8 +13,16 @@ const navItems = [
   { label: "Notices", href: "/notices" },
 ];
 
+const dashboardByRole: Record<Role, { to: string; label: string }> = {
+  admin: { to: "/admin", label: "Admin Panel" },
+  staff: { to: "/staff", label: "Staff Panel" },
+  student: { to: "/student", label: "My Dashboard" },
+};
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const dashboard = user ? dashboardByRole[user.role] : null;
 
   return (
     <header className="w-full relative z-[100]">
@@ -80,18 +89,30 @@ const Header = () => {
             <div className="flex items-center gap-4">
               {/* Premium Buttons */}
               <div className="hidden md:flex items-center gap-3">
-                <Link
-                  to="/registration"
-                  className="px-6 py-3 rounded-xl bg-theme-soft text-theme-dark text-[11px] font-black uppercase tracking-widest transition-all duration-300 hover:bg-theme-dark hover:text-white hover:shadow-lg hover:shadow-theme-soft/20"
-                >
-                  Register Now
-                </Link>
-                <Link
-                  to="/login"
-                  className="px-6 py-3 rounded-xl border-2 border-slate-100 text-theme-dark text-[11px] font-black uppercase tracking-widest transition-all duration-300 hover:border-theme-dark hover:bg-theme-dark hover:text-white"
-                >
-                  Login
-                </Link>
+                {dashboard ? (
+                  <Link
+                    to={dashboard.to}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-theme-soft text-theme-dark text-[11px] font-black uppercase tracking-widest transition-all duration-300 hover:bg-theme-dark hover:text-white hover:shadow-lg hover:shadow-theme-soft/20"
+                  >
+                    <LayoutDashboard size={14} />
+                    {dashboard.label}
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/registration"
+                      className="px-6 py-3 rounded-xl bg-theme-soft text-theme-dark text-[11px] font-black uppercase tracking-widest transition-all duration-300 hover:bg-theme-dark hover:text-white hover:shadow-lg hover:shadow-theme-soft/20"
+                    >
+                      Register Now
+                    </Link>
+                    <Link
+                      to="/login"
+                      className="px-6 py-3 rounded-xl border-2 border-slate-100 text-theme-dark text-[11px] font-black uppercase tracking-widest transition-all duration-300 hover:border-theme-dark hover:bg-theme-dark hover:text-white"
+                    >
+                      Login
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Mobile Toggle */}
@@ -128,22 +149,33 @@ const Header = () => {
                 ))}
               </nav>
 
-              <div className="grid grid-cols-2 gap-4">
+              {dashboard ? (
                 <Link
-                  to="/registration"
+                  to={dashboard.to}
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center justify-center h-14 rounded-2xl bg-theme-soft text-theme-dark text-[11px] font-black uppercase tracking-widest shadow-lg shadow-theme-soft/10"
+                  className="flex items-center justify-center gap-2 h-14 rounded-2xl bg-theme-soft text-theme-dark text-[11px] font-black uppercase tracking-widest shadow-lg shadow-theme-soft/10"
                 >
-                  Register
+                  <LayoutDashboard size={16} />
+                  {dashboard.label}
                 </Link>
-                <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center justify-center h-14 rounded-2xl border-2 border-slate-100 text-theme-dark text-[11px] font-black uppercase tracking-widest"
-                >
-                  Login
-                </Link>
-              </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <Link
+                    to="/registration"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-center h-14 rounded-2xl bg-theme-soft text-theme-dark text-[11px] font-black uppercase tracking-widest shadow-lg shadow-theme-soft/10"
+                  >
+                    Register
+                  </Link>
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-center h-14 rounded-2xl border-2 border-slate-100 text-theme-dark text-[11px] font-black uppercase tracking-widest"
+                  >
+                    Login
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>

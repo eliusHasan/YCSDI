@@ -1,5 +1,5 @@
-import { Award, BookOpen, Building2, GraduationCap, LogOut, ShieldCheck, UsersRound } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Award, BookOpen, Building2, GraduationCap, Home, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
 
 const navItems = [
@@ -52,13 +52,22 @@ export function AdminLayout() {
             ))}
           </nav>
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-all"
-          >
-            <LogOut size={16} />
-            Sign Out
-          </button>
+          <div className="mt-auto flex flex-col gap-1">
+            <Link
+              to="/"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-white/40 hover:bg-white/5 hover:text-white transition-all"
+            >
+              <Home size={16} />
+              View Site
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-all"
+            >
+              <LogOut size={16} />
+              Sign Out
+            </button>
+          </div>
         </aside>
 
         <div className="flex-1 min-w-0">
@@ -66,12 +75,20 @@ export function AdminLayout() {
             <div className="flex items-center gap-2 text-theme-soft text-[10px] font-black uppercase tracking-widest">
               <ShieldCheck size={14} /> Admin Console
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-4">
+              <Link
+                to="/"
+                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all"
+              >
+                <Home size={14} /> Site
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 transition-all"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
           <div className="lg:hidden border-b border-white/5 bg-black/20 px-2 py-2 flex gap-1 overflow-x-auto">
             {navItems.map((item) => (

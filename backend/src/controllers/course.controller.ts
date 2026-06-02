@@ -10,6 +10,24 @@ function parsePrice(raw: unknown): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
+// Subjects arrive over multipart as a JSON string (or a repeated field => array).
+// Returns undefined when the field was not sent at all.
+function parseSubjects(raw: unknown): string[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  let arr: unknown = raw;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed === "") return [];
+    try {
+      arr = JSON.parse(trimmed);
+    } catch {
+      arr = trimmed.split(",");
+    }
+  }
+  if (!Array.isArray(arr)) return undefined;
+  return arr.map((s) => String(s).trim()).filter((s) => s.length > 0);
+}
+
 export class CourseController {
   // ---------- admin ----------
 
@@ -73,6 +91,7 @@ export class CourseController {
       duration,
       level,
       category,
+      subjects: parseSubjects(req.body?.subjects) ?? [],
       status,
     });
 
@@ -104,6 +123,11 @@ export class CourseController {
     if (duration !== undefined) course.duration = duration;
     if (level !== undefined) course.level = level;
     if (category !== undefined) course.category = category;
+
+    if (req.body?.subjects !== undefined) {
+      const subjects = parseSubjects(req.body.subjects);
+      if (subjects) course.subjects = subjects;
+    }
 
     if (status !== undefined) {
       if (!VALID_STATUSES.includes(status)) {

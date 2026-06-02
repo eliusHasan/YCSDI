@@ -2,6 +2,7 @@ import {
   BookOpen,
   CheckCircle2,
   ImageIcon,
+  ListChecks,
   Loader2,
   Pencil,
   Plus,
@@ -21,6 +22,7 @@ interface FormState {
   duration: string;
   level: string;
   category: string;
+  subjects: string[];
   status: CourseStatus;
 }
 
@@ -32,10 +34,11 @@ const emptyForm: FormState = {
   duration: "",
   level: "",
   category: "",
+  subjects: [],
   status: "draft",
 };
 
-const levels = ["Beginner", "Intermediate", "Professional", "Career Focused"];
+const levels = ["Level 1", "Level 2", "Level 1& 2", "Level 3", "Level 1,2 & 3", "Level 4"];
 
 export function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -89,6 +92,7 @@ export function AdminCoursesPage() {
       duration: course.duration ?? "",
       level: course.level ?? "",
       category: course.category ?? "",
+      subjects: course.subjects ?? [],
       status: course.status,
     });
     setImageFile(null);
@@ -103,6 +107,12 @@ export function AdminCoursesPage() {
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
+
+  const addSubject = () => setForm((f) => ({ ...f, subjects: [...f.subjects, ""] }));
+  const updateSubject = (index: number, value: string) =>
+    setForm((f) => ({ ...f, subjects: f.subjects.map((s, i) => (i === index ? value : s)) }));
+  const removeSubject = (index: number) =>
+    setForm((f) => ({ ...f, subjects: f.subjects.filter((_, i) => i !== index) }));
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -123,6 +133,8 @@ export function AdminCoursesPage() {
     if (form.duration) fd.append("duration", form.duration);
     if (form.level) fd.append("level", form.level);
     if (form.category) fd.append("category", form.category);
+    const cleanedSubjects = form.subjects.map((s) => s.trim()).filter(Boolean);
+    fd.append("subjects", JSON.stringify(cleanedSubjects));
     fd.append("status", form.status);
     if (imageFile) fd.append("image", imageFile);
 
@@ -241,6 +253,12 @@ export function AdminCoursesPage() {
                               {course.category}
                             </p>
                           )}
+                          {course.subjects && course.subjects.length > 0 && (
+                            <p className="text-white/40 mt-1 flex items-center gap-1.5">
+                              <ListChecks size={10} />
+                              {course.subjects.length} subject{course.subjects.length > 1 ? "s" : ""}
+                            </p>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <StatusBadge status={course.status} />
@@ -274,7 +292,8 @@ export function AdminCoursesPage() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-theme-dark/80 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
           <div className="relative w-full max-w-2xl bg-theme-dark border border-white/10 rounded-[32px] p-8 shadow-2xl my-8">
             <button
               onClick={() => setModalOpen(false)}
@@ -373,6 +392,9 @@ export function AdminCoursesPage() {
                     {levels.map((l) => (
                       <option key={l} value={l} className="bg-theme-dark">{l}</option>
                     ))}
+                    {form.level && !levels.includes(form.level) && (
+                      <option value={form.level} className="bg-theme-dark">{form.level}</option>
+                    )}
                   </select>
                 </div>
                 <Field
@@ -381,6 +403,51 @@ export function AdminCoursesPage() {
                   onChange={(v) => setForm({ ...form, category: v })}
                   placeholder="Software"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1 flex items-center gap-1.5">
+                    <ListChecks size={11} /> Subjects
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addSubject}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-theme-soft hover:bg-theme-soft hover:text-theme-dark transition-all"
+                  >
+                    <Plus size={12} /> Add Subject
+                  </button>
+                </div>
+                {form.subjects.length === 0 ? (
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/20 ml-1">
+                    No subjects added yet
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {form.subjects.map((subject, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-theme-soft">
+                          {i + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={subject}
+                          onChange={(e) => updateSubject(i, e.target.value)}
+                          placeholder={`Subject ${i + 1} name`}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSubject(i)}
+                          className="p-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors shrink-0"
+                          title="Remove subject"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -420,6 +487,7 @@ export function AdminCoursesPage() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </div>
       )}

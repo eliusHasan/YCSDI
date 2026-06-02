@@ -62,8 +62,9 @@ export function PopularCourses() {
         ) : (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {courses.map((course, index) => (
-              <article
+              <Link
                 key={course._id}
+                to={`/courses/${course.slug}`}
                 className="group relative flex flex-col bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 hover:shadow-[0_20px_50px_rgba(27,60,83,0.12)] hover:-translate-y-2"
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
@@ -114,15 +115,12 @@ export function PopularCourses() {
                       <span>{formatPrice(course.offerPrice ?? course.price)}</span>
                     </div>
 
-                    <Link
-                      to="/registration"
-                      className="flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-50 text-theme-dark group-hover:bg-theme-soft group-hover:text-theme-dark transition-all duration-300"
-                    >
+                    <span className="flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-50 text-theme-dark group-hover:bg-theme-soft group-hover:text-theme-dark transition-all duration-300">
                       <ArrowRight size={20} />
-                    </Link>
+                    </span>
                   </div>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}

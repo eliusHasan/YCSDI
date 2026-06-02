@@ -287,7 +287,8 @@ export function AdminStaffPage() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-theme-dark/80 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
           <div className="relative w-full max-w-xl bg-theme-dark border border-white/10 rounded-[32px] p-8 shadow-2xl my-8">
             <button
               onClick={() => setModalOpen(false)}
@@ -426,6 +427,7 @@ export function AdminStaffPage() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </div>
       )}

@@ -104,6 +104,7 @@ export interface Course {
   duration?: string;
   level?: string;
   category?: string;
+  subjects?: string[];
   status: CourseStatus;
   createdAt: string;
   updatedAt: string;

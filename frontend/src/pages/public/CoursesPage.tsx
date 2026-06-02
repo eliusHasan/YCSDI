@@ -111,8 +111,9 @@ export function CoursesPage() {
           ) : (
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((course) => (
-                <article
+                <Link
                   key={course._id}
+                  to={`/courses/${course.slug}`}
                   className="group flex flex-col bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 hover:shadow-[0_20px_50px_rgba(27,60,83,0.12)] hover:-translate-y-2"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden">
@@ -175,16 +176,13 @@ export function CoursesPage() {
                       ) : (
                         <span />
                       )}
-                      <Link
-                        to="/registration"
-                        className="flex items-center gap-2 text-sm font-black text-theme-dark hover:text-theme-primary transition-all"
-                      >
-                        Enroll Now
-                        <ArrowRight size={18} />
-                      </Link>
+                      <span className="flex items-center gap-2 text-sm font-black text-theme-dark group-hover:text-theme-primary transition-all">
+                        View Details
+                        <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                      </span>
                     </div>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           )}

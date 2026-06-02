@@ -8,6 +8,7 @@ import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminInstitutesPage } from "./pages/admin/AdminInstitutesPage";
 import { AdminStaffPage } from "./pages/admin/AdminStaffPage";
 import { AboutPage } from "./pages/public/AboutPage";
+import { CourseDetailPage } from "./pages/public/CourseDetailPage";
 import { CoursesPage } from "./pages/public/CoursesPage";
 import { HomePage } from "./pages/public/HomePage";
 import { LoginPage } from "./pages/public/LoginPage";
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/result" element={<ResultPage />} />
         <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/courses/:slug" element={<CourseDetailPage />} />
         <Route path="/verified-institute" element={<VerifiedInstitutePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/notices" element={<NoticesPage />} />

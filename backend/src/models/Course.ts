@@ -12,6 +12,7 @@ export interface ICourse extends Document {
   duration?: string;
   level?: string;
   category?: string;
+  subjects: string[];
   status: CourseStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +29,7 @@ const courseSchema = new Schema<ICourse>(
     duration: { type: String, trim: true },
     level: { type: String, trim: true },
     category: { type: String, trim: true },
+    subjects: { type: [String], default: [] },
     status: { type: String, enum: ["draft", "published", "archived"], default: "draft", index: true },
   },
   { timestamps: true },
