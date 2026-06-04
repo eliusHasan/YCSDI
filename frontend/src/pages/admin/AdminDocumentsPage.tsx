@@ -2,6 +2,7 @@ import {
   Award,
   BadgeCheck,
   Building2,
+  Calendar,
   CheckCircle2,
   Download,
   ExternalLink,
@@ -9,9 +10,12 @@ import {
   GraduationCap,
   Hash,
   IdCard,
+  LayoutGrid,
   Loader2,
   RefreshCw,
   Save,
+  Search,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -20,31 +24,64 @@ import {
   adminApi,
   documentApi,
   type AdminStudentDetailResponse,
+  type CertificateCourseRef,
+  type CertificateInstituteRef,
+  type CertificateIssuerRef,
+  type CertificateStudentRef,
   type DocumentType,
   type Enrollment,
   type IssuedDocument,
   type Student,
 } from "../../services/api";
 
-const DOC_META: { type: DocumentType; label: string; icon: typeof FileText; needsMarks: boolean }[] = [
-  { type: "registration", label: "Registration Card", icon: IdCard, needsMarks: false },
-  { type: "admit", label: "Admit Card", icon: FileText, needsMarks: false },
-  { type: "marksheet", label: "Marksheet", icon: GraduationCap, needsMarks: true },
-  { type: "certificate", label: "Certificate", icon: Award, needsMarks: true },
+type AnyDoc = IssuedDocument & { certificateNumber?: string };
+interface DocBuckets {
+  registration: AnyDoc[];
+  admit: AnyDoc[];
+  marksheet: AnyDoc[];
+  certificate: AnyDoc[];
+}
+
+const DOC_META: { type: DocumentType; label: string; short: string; icon: typeof FileText; needsMarks: boolean }[] = [
+  { type: "registration", label: "Registration Card", short: "Reg. Card", icon: IdCard, needsMarks: false },
+  { type: "admit", label: "Admit Card", short: "Admit", icon: FileText, needsMarks: false },
+  { type: "marksheet", label: "Marksheet", short: "Marksheet", icon: GraduationCap, needsMarks: true },
+  { type: "certificate", label: "Certificate", short: "Certificate", icon: Award, needsMarks: true },
 ];
+const metaFor = (t: DocumentType) => DOC_META.find((m) => m.type === t)!;
+
+function isRef<T>(v: T | string | undefined): v is T {
+  return typeof v === "object" && v !== null;
+}
+
+function findDoc(docs: AnyDoc[], enrollmentId: string): AnyDoc | undefined {
+  return docs.find((d) => d.enrollmentId === enrollmentId);
+}
 
 export function AdminDocumentsPage() {
+  const [tab, setTab] = useState<"issue" | "all">("issue");
   const [students, setStudents] = useState<Student[]>([]);
   const [studentId, setStudentId] = useState("");
   const [detail, setDetail] = useState<AdminStudentDetailResponse | null>(null);
+  const [allDocs, setAllDocs] = useState<DocBuckets | null>(null);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const loadAllDocs = async () => {
+    const [r, a, m, c] = await Promise.all([
+      documentApi.list<AnyDoc>("registration"),
+      documentApi.list<AnyDoc>("admit"),
+      documentApi.list<AnyDoc>("marksheet"),
+      documentApi.list<AnyDoc>("certificate"),
+    ]);
+    setAllDocs({ registration: r.data, admit: a.data, marksheet: m.data, certificate: c.data });
+  };
 
   useEffect(() => {
     void (async () => {
       try {
-        const { data } = await adminApi.getStudents();
-        setStudents(data.filter((s) => s.status === "approved" && !s.banned));
+        const [s] = await Promise.all([adminApi.getStudents(), loadAllDocs()]);
+        setStudents(s.data.filter((x) => x.status === "approved" && !x.banned));
       } finally {
         setLoadingStudents(false);
       }
@@ -68,10 +105,24 @@ export function AdminDocumentsPage() {
     else setDetail(null);
   }, [studentId]);
 
+  // Refresh both the selected student's detail and the global document lists.
+  const refresh = async () => {
+    await Promise.all([studentId ? loadDetail(studentId) : Promise.resolve(), loadAllDocs()]);
+  };
+
   const options = useMemo(
     () => students.map((s) => ({ value: s._id, label: `${s.registrationId} — ${s.fullName}` })),
     [students],
   );
+
+  const counts = allDocs
+    ? {
+        registration: allDocs.registration.length,
+        admit: allDocs.admit.length,
+        marksheet: allDocs.marksheet.length,
+        certificate: allDocs.certificate.length,
+      }
+    : null;
 
   return (
     <div className="p-6 lg:p-10">
@@ -83,84 +134,140 @@ export function AdminDocumentsPage() {
           </div>
           <h1 className="text-3xl font-black tracking-tight">Student Documents.</h1>
           <p className="text-white/40 text-sm font-bold uppercase tracking-wider mt-1">
-            Enter marks, then issue registration cards, admit cards, marksheets & certificates
+            Enter marks, then issue registration cards, admit cards, marksheets &amp; certificates
           </p>
         </div>
 
-        <div className="max-w-xl">
-          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1 mb-2 block">
-            Select an approved student
-          </label>
-          {loadingStudents ? (
-            <Loader2 className="text-theme-soft animate-spin" size={20} />
-          ) : (
-            <SearchableSelect
-              name="student"
-              value={studentId}
-              onChange={setStudentId}
-              options={options}
-              placeholder="Pick a student…"
-              icon={GraduationCap}
-            />
-          )}
+        {/* Quick stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {DOC_META.map((m) => (
+            <div key={m.type} className="rounded-2xl bg-white/5 border border-white/10 p-5">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-theme-soft/10 text-theme-soft mb-3">
+                <m.icon size={18} />
+              </div>
+              <p className="text-2xl font-black">{counts ? counts[m.type] : <span className="text-white/20">—</span>}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mt-1">{m.label}s</p>
+            </div>
+          ))}
         </div>
 
-        {loadingDetail && (
-          <div className="p-16 flex justify-center">
-            <Loader2 className="text-theme-soft animate-spin" size={28} />
-          </div>
-        )}
+        {/* Tabs */}
+        <div className="inline-flex gap-1 p-1.5 rounded-2xl bg-white/5 border border-white/10">
+          <TabButton active={tab === "issue"} onClick={() => setTab("issue")} icon={Sparkles} label="Issue Documents" />
+          <TabButton active={tab === "all"} onClick={() => setTab("all")} icon={LayoutGrid} label={`All Documents${counts ? ` (${counts.registration + counts.admit + counts.marksheet + counts.certificate})` : ""}`} />
+        </div>
 
-        {detail && !loadingDetail && (
+        {tab === "issue" ? (
           <div className="space-y-6">
-            <div className="flex items-center gap-4 rounded-2xl bg-white/5 border border-white/10 p-5">
-              <div className="h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-white/5 shrink-0">
-                <img src={detail.student.photoUrl} alt="" className="h-full w-full object-cover" />
-              </div>
-              <div>
-                <p className="text-lg font-black uppercase tracking-tight">{detail.student.fullName}</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-1 flex items-center gap-1.5">
-                  <Hash size={11} /> {detail.student.registrationId}
-                  {detail.student.instituteId && (
-                    <>
-                      <Building2 size={11} className="ml-3" />
-                      {detail.student.instituteId.code}
-                    </>
-                  )}
-                </p>
-              </div>
+            <div className="max-w-xl">
+              <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1 mb-2 block">
+                Select an approved student
+              </label>
+              {loadingStudents ? (
+                <Loader2 className="text-theme-soft animate-spin" size={20} />
+              ) : (
+                <SearchableSelect
+                  name="student"
+                  value={studentId}
+                  onChange={setStudentId}
+                  options={options}
+                  placeholder="Pick a student…"
+                  icon={GraduationCap}
+                />
+              )}
             </div>
 
-            {detail.enrollments.length === 0 ? (
-              <div className="rounded-[28px] bg-white/5 border border-white/10 p-12 text-center">
-                <GraduationCap className="text-white/20 mx-auto mb-3" size={32} />
-                <p className="text-white/40 text-sm font-bold uppercase tracking-widest">No enrollments</p>
+            {loadingDetail && (
+              <div className="p-16 flex justify-center">
+                <Loader2 className="text-theme-soft animate-spin" size={28} />
               </div>
-            ) : (
-              detail.enrollments.map((enr) => (
-                <EnrollmentPanel
-                  key={enr._id}
-                  enrollment={enr}
-                  documents={detail.documents}
-                  onChanged={() => loadDetail(detail.student._id)}
-                />
-              ))
+            )}
+
+            {!studentId && !loadingDetail && (
+              <div className="rounded-[28px] bg-white/5 border border-white/10 border-dashed p-16 text-center">
+                <GraduationCap className="text-white/20 mx-auto mb-3" size={32} />
+                <p className="text-white/40 text-sm font-bold uppercase tracking-widest">Pick a student to manage marks &amp; documents</p>
+              </div>
+            )}
+
+            {detail && !loadingDetail && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 rounded-2xl bg-white/5 border border-white/10 p-5">
+                  <div className="h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                    <img src={detail.student.photoUrl} alt="" className="h-full w-full object-cover" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-black uppercase tracking-tight">{detail.student.fullName}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-1 flex items-center gap-1.5">
+                      <Hash size={11} /> {detail.student.registrationId}
+                      {detail.student.instituteId && (
+                        <>
+                          <Building2 size={11} className="ml-3" />
+                          {detail.student.instituteId.code}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {detail.enrollments.length === 0 ? (
+                  <div className="rounded-[28px] bg-white/5 border border-white/10 p-12 text-center">
+                    <GraduationCap className="text-white/20 mx-auto mb-3" size={32} />
+                    <p className="text-white/40 text-sm font-bold uppercase tracking-widest">No enrollments</p>
+                  </div>
+                ) : (
+                  detail.enrollments.map((enr) => (
+                    <EnrollmentPanel key={enr._id} enrollment={enr} documents={detail.documents} onChanged={refresh} />
+                  ))
+                )}
+              </div>
             )}
           </div>
+        ) : (
+          <AllDocumentsTab allDocs={allDocs} onChanged={refresh} />
         )}
       </div>
     </div>
   );
 }
 
-function findDoc<T extends IssuedDocument>(docs: T[], enrollmentId: string): T | undefined {
-  return docs.find((d) => d.enrollmentId === enrollmentId);
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof FileText;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+        active ? "bg-theme-soft text-theme-dark shadow-lg shadow-theme-soft/10" : "text-white/50 hover:text-white hover:bg-white/5"
+      }`}
+    >
+      <Icon size={14} />
+      {label}
+    </button>
+  );
 }
+
+/* ---------------- Issue tab: per-enrollment panel ---------------- */
 
 interface PanelProps {
   enrollment: Enrollment;
   documents: AdminStudentDetailResponse["documents"];
-  onChanged: () => void;
+  onChanged: () => void | Promise<void>;
+}
+
+function bucketFor(documents: AdminStudentDetailResponse["documents"], type: DocumentType): AnyDoc[] {
+  if (type === "registration") return documents.registrationCards as AnyDoc[];
+  if (type === "admit") return documents.admitCards as AnyDoc[];
+  if (type === "marksheet") return documents.marksheets as AnyDoc[];
+  return documents.certificates as AnyDoc[];
 }
 
 function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
@@ -171,6 +278,7 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
     registrationNo: enrollment.registrationNo ?? "",
     session: enrollment.session ?? "",
   });
+  const [examDate, setExamDate] = useState("");
   const [published, setPublished] = useState(r?.published ?? false);
   const [subjects, setSubjects] = useState<{ name: string; fullMark: string; obtainedMark: string }[]>(() => {
     const existing = r?.subjects ?? [];
@@ -181,7 +289,7 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
     });
   });
   const [saving, setSaving] = useState(false);
-  const [issuing, setIssuing] = useState<DocumentType | null>(null);
+  const [issuing, setIssuing] = useState<DocumentType | "all" | null>(null);
   const [regenerating, setRegenerating] = useState<DocumentType | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -201,15 +309,11 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
         rollNo: identity.rollNo || undefined,
         registrationNo: identity.registrationNo || undefined,
         session: identity.session || undefined,
-        subjects: subjects.map((s) => ({
-          name: s.name,
-          fullMark: Number(s.fullMark) || 0,
-          obtainedMark: Number(s.obtainedMark) || 0,
-        })),
+        subjects: subjects.map((s) => ({ name: s.name, fullMark: Number(s.fullMark) || 0, obtainedMark: Number(s.obtainedMark) || 0 })),
         published,
       });
       setMsg("Saved");
-      onChanged();
+      await onChanged();
     } catch (e: any) {
       setMsg(e.response?.data?.message ?? "Save failed");
     } finally {
@@ -221,13 +325,39 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
     setIssuing(type);
     setMsg(null);
     try {
-      await documentApi.issue(type, enrollment._id);
-      onChanged();
+      await documentApi.issue(type, enrollment._id, examDate || undefined);
+      await onChanged();
     } catch (e: any) {
       setMsg(e.response?.data?.message ?? "Issue failed");
     } finally {
       setIssuing(null);
     }
+  };
+
+  const issueAll = async () => {
+    setIssuing("all");
+    setMsg(null);
+    let done = 0;
+    let skipped = 0;
+    for (const meta of DOC_META) {
+      if (findDoc(bucketFor(documents, meta.type), enrollment._id)) {
+        skipped += 1;
+        continue;
+      }
+      if (meta.needsMarks && !hasMarks) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        await documentApi.issue(meta.type, enrollment._id, examDate || undefined);
+        done += 1;
+      } catch {
+        /* keep going */
+      }
+    }
+    setMsg(`Issued ${done}${skipped ? `, skipped ${skipped}` : ""}`);
+    await onChanged();
+    setIssuing(null);
   };
 
   const regenerate = async (type: DocumentType, id: string) => {
@@ -236,7 +366,7 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
     try {
       await documentApi.regenerate(type, id);
       setMsg(`${type} regenerated`);
-      onChanged();
+      await onChanged();
     } catch (e: any) {
       setMsg(e.response?.data?.message ?? "Regenerate failed");
     } finally {
@@ -248,7 +378,7 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
     if (!confirm(`Delete this ${type} document? (PDF stays on Cloudinary)`)) return;
     try {
       await documentApi.remove(type, id);
-      onChanged();
+      await onChanged();
     } catch (e: any) {
       alert(e.response?.data?.message ?? "Delete failed");
     }
@@ -258,10 +388,16 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
     "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-theme-soft/50 transition-all";
   const labelCls = "text-[9px] font-black uppercase tracking-[0.18em] text-white/40 mb-1 block ml-0.5";
 
+  const issuedCount = DOC_META.filter((m) => findDoc(bucketFor(documents, m.type), enrollment._id)).length;
+  const busy = issuing !== null;
+
   return (
     <div className="rounded-[28px] bg-white/5 border border-white/10 overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-white/5 bg-white/[0.02]">
-        <p className="text-sm font-black uppercase tracking-tight">{enrollment.courseId.title}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+        <div className="flex items-center gap-3">
+          <p className="text-sm font-black uppercase tracking-tight">{enrollment.courseId.title}</p>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">{issuedCount}/4 issued</span>
+        </div>
         {r?.cgpa !== undefined && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-theme-soft/10 border border-theme-soft/30 text-theme-soft text-[10px] font-black uppercase tracking-widest">
             <BadgeCheck size={11} /> CGPA {r.cgpa.toFixed(2)} · {r.letterGrade}
@@ -272,7 +408,7 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
 
       <div className="p-6 space-y-5">
         {/* Identity */}
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div className="grid sm:grid-cols-4 gap-3">
           <div>
             <label className={labelCls}>Roll No</label>
             <input className={inputCls} value={identity.rollNo} onChange={(e) => setId("rollNo", e.target.value)} />
@@ -284,6 +420,10 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
           <div>
             <label className={labelCls}>Session</label>
             <input className={inputCls} placeholder="Jan 2024 - Dec 2024" value={identity.session} onChange={(e) => setId("session", e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>Exam Date (admit/cert)</label>
+            <input type="date" className={`${inputCls} [color-scheme:dark]`} value={examDate} onChange={(e) => setExamDate(e.target.value)} />
           </div>
         </div>
 
@@ -337,49 +477,240 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
           </div>
         </div>
 
-        {/* Issue buttons */}
-        <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
-          {DOC_META.map((meta) => {
-            const bucket =
-              meta.type === "registration" ? documents.registrationCards
-              : meta.type === "admit" ? documents.admitCards
-              : meta.type === "marksheet" ? documents.marksheets
-              : documents.certificates;
-            const existing = findDoc(bucket as IssuedDocument[], enrollment._id);
-            const blocked = meta.needsMarks && !hasMarks;
+        {/* Issue buttons + bulk */}
+        <div className="pt-2 border-t border-white/5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/40">Documents</p>
+            <button
+              onClick={issueAll}
+              disabled={busy || issuedCount === 4}
+              title={issuedCount === 4 ? "All documents already issued" : "Issue all eligible documents"}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-40"
+            >
+              {issuing === "all" ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Issue All
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {DOC_META.map((meta) => {
+              const existing = findDoc(bucketFor(documents, meta.type), enrollment._id);
+              const blocked = meta.needsMarks && !hasMarks;
 
-            return (
-              <div key={meta.type} className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <meta.icon size={16} className="text-theme-soft shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-black uppercase tracking-widest truncate">{meta.label}</p>
-                    {existing && <p className="text-[9px] font-bold text-white/30 truncate">Serial {existing.serialNo}</p>}
+              return (
+                <div key={meta.type} className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <meta.icon size={16} className="text-theme-soft shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-widest truncate">{meta.label}</p>
+                      {existing ? (
+                        <p className="text-[9px] font-bold text-white/30 truncate">
+                          #{existing.serialNo} · {new Date(existing.issuedAt).toLocaleDateString()}
+                        </p>
+                      ) : blocked ? (
+                        <p className="text-[9px] font-bold text-amber-300/60 truncate">Needs marks</p>
+                      ) : null}
+                    </div>
                   </div>
+                  {existing ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a href={existing.pdfUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="View"><ExternalLink size={13} /></a>
+                      <a href={existing.pdfUrl} download className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="Download"><Download size={13} /></a>
+                      <button onClick={() => regenerate(meta.type, existing._id)} disabled={busy || regenerating !== null || blocked} title="Regenerate from current data" className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors disabled:opacity-40"><RefreshCw size={13} className={regenerating === meta.type ? "animate-spin" : ""} /></button>
+                      <button onClick={() => removeDoc(meta.type, existing._id)} className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors" title="Delete"><Trash2 size={13} /></button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => issue(meta.type)}
+                      disabled={busy || blocked}
+                      title={blocked ? "Save subject marks first" : undefined}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-40 shrink-0"
+                    >
+                      {issuing === meta.type ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                      Issue
+                    </button>
+                  )}
                 </div>
-                {existing ? (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <a href={existing.pdfUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="View"><ExternalLink size={13} /></a>
-                    <a href={existing.pdfUrl} download className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="Download"><Download size={13} /></a>
-                    <button onClick={() => regenerate(meta.type, existing._id)} disabled={!!regenerating || (blocked)} title="Regenerate from current data" className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors disabled:opacity-40"><RefreshCw size={13} className={regenerating === meta.type ? "animate-spin" : ""} /></button>
-                    <button onClick={() => removeDoc(meta.type, existing._id)} className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors" title="Delete"><Trash2 size={13} /></button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => issue(meta.type)}
-                    disabled={!!issuing || blocked}
-                    title={blocked ? "Save exam marks first" : undefined}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-40 shrink-0"
-                  >
-                    {issuing === meta.type ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                    Issue
-                  </button>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/* ---------------- All documents tab ---------------- */
+
+function AllDocumentsTab({ allDocs, onChanged }: { allDocs: DocBuckets | null; onChanged: () => void | Promise<void>; }) {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<DocumentType | "all">("all");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const rows = useMemo(() => {
+    if (!allDocs) return [];
+    const tag = (type: DocumentType, arr: AnyDoc[]) => arr.map((doc) => ({ type, doc }));
+    return [
+      ...tag("registration", allDocs.registration),
+      ...tag("admit", allDocs.admit),
+      ...tag("marksheet", allDocs.marksheet),
+      ...tag("certificate", allDocs.certificate),
+    ].sort((a, b) => new Date(b.doc.issuedAt).getTime() - new Date(a.doc.issuedAt).getTime());
+  }, [allDocs]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter(({ type, doc }) => {
+      if (filter !== "all" && type !== filter) return false;
+      if (!q) return true;
+      const stu = isRef<CertificateStudentRef>(doc.studentId) ? doc.studentId : null;
+      const crs = isRef<CertificateCourseRef>(doc.courseId) ? doc.courseId : null;
+      return [doc.serialNo, doc.certificateNumber ?? "", stu?.fullName ?? "", stu?.registrationId ?? "", crs?.title ?? ""]
+        .some((v) => v.toLowerCase().includes(q));
+    });
+  }, [rows, search, filter]);
+
+  const regenerate = async (type: DocumentType, id: string) => {
+    setBusyId(id);
+    try {
+      await documentApi.regenerate(type, id);
+      await onChanged();
+    } catch (e: any) {
+      alert(e.response?.data?.message ?? "Regenerate failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const remove = async (type: DocumentType, id: string) => {
+    if (!confirm(`Delete this ${type} document? (PDF stays on Cloudinary)`)) return;
+    setBusyId(id);
+    try {
+      await documentApi.remove(type, id);
+      await onChanged();
+    } catch (e: any) {
+      alert(e.response?.data?.message ?? "Delete failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (!allDocs) {
+    return (
+      <div className="p-16 flex justify-center">
+        <Loader2 className="text-theme-soft animate-spin" size={28} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          <FilterChip active={filter === "all"} onClick={() => setFilter("all")} label="All" />
+          {DOC_META.map((m) => (
+            <FilterChip key={m.type} active={filter === m.type} onClick={() => setFilter(m.type)} label={m.short} />
+          ))}
+        </div>
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, serial, course…"
+            className="bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold focus:outline-none focus:border-theme-soft/50 transition-all w-64"
+          />
+        </div>
+      </div>
+
+      <div className="bg-white/5 border border-white/10 rounded-[28px] overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="p-16 text-center">
+            <FileText className="text-white/20 mx-auto mb-3" size={32} />
+            <p className="text-white/40 text-sm font-bold uppercase tracking-widest">
+              {rows.length === 0 ? "No documents issued yet" : "No matches"}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-theme-soft">Type</th>
+                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-theme-soft">Student</th>
+                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-theme-soft">Course</th>
+                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-theme-soft">Serial · Issued</th>
+                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-theme-soft text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filtered.map(({ type, doc }) => {
+                  const meta = metaFor(type);
+                  const stu = isRef<CertificateStudentRef>(doc.studentId) ? doc.studentId : null;
+                  const crs = isRef<CertificateCourseRef>(doc.courseId) ? doc.courseId : null;
+                  const inst = isRef<CertificateInstituteRef>(doc.instituteId) ? doc.instituteId : null;
+                  const issuer = isRef<CertificateIssuerRef>(doc.issuedByAdminId) ? doc.issuedByAdminId : null;
+                  return (
+                    <tr key={`${type}-${doc._id}`} className="hover:bg-white/[0.02] transition-colors group/row">
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-theme-soft">
+                          <meta.icon size={13} /> {meta.short}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        {stu ? (
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full border border-white/10 overflow-hidden bg-white/5 shrink-0">
+                              <img src={stu.photoUrl} alt="" className="h-full w-full object-cover" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-black uppercase tracking-wide truncate">{stu.fullName}</p>
+                              <p className="text-[10px] font-bold text-white/30">{stu.registrationId}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-white/30">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-[11px] font-bold text-white/60">
+                        <p className="truncate max-w-[180px]">{crs?.title ?? "—"}</p>
+                        {inst && <p className="text-white/30 mt-0.5">{inst.code}</p>}
+                      </td>
+                      <td className="px-5 py-4 text-[11px] font-bold text-white/60">
+                        <p className="text-theme-soft flex items-center gap-1.5"><Hash size={10} />{doc.serialNo}</p>
+                        <p className="text-white/30 mt-0.5 flex items-center gap-1.5">
+                          <Calendar size={10} /> {new Date(doc.issuedAt).toLocaleDateString()}
+                          {issuer ? ` · ${issuer.userId}` : ""}
+                        </p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="View"><ExternalLink size={13} /></a>
+                          <a href={doc.pdfUrl} download className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="Download"><Download size={13} /></a>
+                          <button onClick={() => regenerate(type, doc._id)} disabled={busyId === doc._id} className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors disabled:opacity-40" title="Regenerate"><RefreshCw size={13} className={busyId === doc._id ? "animate-spin" : ""} /></button>
+                          <button onClick={() => remove(type, doc._id)} disabled={busyId === doc._id} className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-40" title="Delete"><Trash2 size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+        active ? "bg-theme-soft text-theme-dark" : "bg-white/5 border border-white/10 text-white/50 hover:text-white"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
