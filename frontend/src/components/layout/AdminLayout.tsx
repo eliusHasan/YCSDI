@@ -1,8 +1,16 @@
-import { BookOpen, Building2, FileText, GraduationCap, Home, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { BookOpen, Building2, FileText, GraduationCap, Home, LayoutDashboard, LogOut, ShieldCheck, UsersRound } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
 
-const navItems = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  end?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/students", label: "Students", icon: GraduationCap },
   { to: "/admin/courses", label: "Courses", icon: BookOpen },
   { to: "/admin/institutes", label: "Institutes", icon: Building2 },
@@ -38,6 +46,7 @@ export function AdminLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                     isActive
@@ -95,6 +104,7 @@ export function AdminLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   `shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                     isActive ? "bg-theme-soft text-theme-dark" : "text-white/40 hover:bg-white/5 hover:text-white"

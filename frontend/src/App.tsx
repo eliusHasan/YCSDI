@@ -1,10 +1,11 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { AdminLayout } from "./components/layout/AdminLayout";
 import { PublicShell } from "./components/layout/PublicShell";
 import { AdminCoursesPage } from "./pages/admin/AdminCoursesPage";
 import { AdminDocumentsPage } from "./pages/admin/AdminDocumentsPage";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AdminOverview } from "./pages/admin/AdminOverview";
 import { AdminInstitutesPage } from "./pages/admin/AdminInstitutesPage";
 import { AdminStaffPage } from "./pages/admin/AdminStaffPage";
 import { AboutPage } from "./pages/public/AboutPage";
@@ -45,7 +46,7 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="students" replace />} />
+        <Route index element={<AdminOverview />} />
         <Route path="students" element={<AdminDashboard />} />
         <Route path="courses" element={<AdminCoursesPage />} />
         <Route path="institutes" element={<AdminInstitutesPage />} />

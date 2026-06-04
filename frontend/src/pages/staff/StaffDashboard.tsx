@@ -6,6 +6,7 @@ import {
   Calendar,
   CheckCircle2,
   Download,
+  FileText,
   Hash,
   Loader2,
   LogOut,
@@ -22,9 +23,11 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  staffStatsApi,
   staffStudentApi,
   type Certificate,
   type Enrollment,
+  type StaffStats,
   type StaffStudentUpdatePayload,
   type Student,
 } from "../../services/api";
@@ -76,6 +79,7 @@ export function StaffDashboard() {
   const { user, clearSession } = useAuthStore();
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [stats, setStats] = useState<StaffStats | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -88,6 +92,7 @@ export function StaffDashboard() {
 
   useEffect(() => {
     void loadList();
+    void staffStatsApi.get().then((r) => setStats(r.data)).catch(() => {});
   }, []);
 
   const loadList = async () => {
@@ -220,6 +225,15 @@ export function StaffDashboard() {
             Sign Out
           </button>
         </div>
+
+        {stats && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StaffStatCard icon={Users} label="Students" value={stats.students.total} sub={`${stats.students.approved} approved`} highlight />
+            <StaffStatCard icon={BookOpen} label="Active Enrollments" value={stats.enrollments.active} sub={`${stats.enrollments.completed} completed`} />
+            <StaffStatCard icon={Award} label="Certificates" value={stats.certificates.total} sub="issued" />
+            <StaffStatCard icon={FileText} label="Marksheets" value={stats.marksheets.total} sub="issued" />
+          </div>
+        )}
 
         <div className="relative group max-w-2xl">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-theme-soft/20 to-theme-accent/20 rounded-2xl blur opacity-50 group-focus-within:opacity-100 transition-opacity" />
@@ -589,6 +603,27 @@ function StudentReadView({ student, enrollments, certificates, onEdit }: Student
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+interface StaffStatCardProps {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: number;
+  sub: string;
+  highlight?: boolean;
+}
+
+function StaffStatCard({ icon: Icon, label, value, sub, highlight }: StaffStatCardProps) {
+  return (
+    <div className={`rounded-[24px] p-5 border ${highlight ? "bg-theme-soft/10 border-theme-soft/30" : "bg-white/5 border-white/10"}`}>
+      <div className={`grid h-10 w-10 place-items-center rounded-xl mb-4 ${highlight ? "bg-theme-soft/20 text-theme-soft" : "bg-white/5 text-theme-soft"}`}>
+        <Icon size={18} />
+      </div>
+      <p className="text-3xl font-black tracking-tight">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mt-1">{label}</p>
+      <p className="text-[10px] font-bold text-white/30 mt-1.5">{sub}</p>
     </div>
   );
 }

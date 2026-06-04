@@ -12,6 +12,7 @@ import { documentRoutes } from "./routes/documents.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { instituteRoutes } from "./routes/institute.routes.js";
 import { publicRoutes } from "./routes/public.routes.js";
+import { adminStatsRoutes, staffStatsRoutes } from "./routes/stats.routes.js";
 import { staffRoutes } from "./routes/staff.routes.js";
 import { staffStudentRoutes } from "./routes/staff-student.routes.js";
 import { studentRoutes } from "./routes/student.routes.js";
@@ -71,6 +72,7 @@ export function createApp() {
   app.use("/api/v1/public", publicRoutes);
   app.use("/api/v1/students", studentRoutes);
   app.use("/api/v1/admin", requireAuth, requireRole("admin"));
+  app.use("/api/v1/admin/stats", adminStatsRoutes);
   app.use("/api/v1/admin/students", adminStudentRoutes);
   app.use("/api/v1/admin/institutes", instituteRoutes);
   app.use("/api/v1/admin/staff", staffRoutes);
@@ -78,6 +80,7 @@ export function createApp() {
   app.use("/api/v1/admin/documents", documentRoutes);
 
   app.use("/api/v1/staff", requireAuth, requireRole("staff"));
+  app.use("/api/v1/staff/stats", staffStatsRoutes);
   app.use("/api/v1/staff/students", staffStudentRoutes);
 
   return app;

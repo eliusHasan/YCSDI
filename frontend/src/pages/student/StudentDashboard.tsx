@@ -132,6 +132,13 @@ export function StudentDashboard() {
           />
         </div>
 
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <CountCard icon={BookOpen} label="Enrollments" value={enrollments.length} />
+          <CountCard icon={IdCard} label="Cards" value={registrationCards.length + admitCards.length} />
+          <CountCard icon={GraduationCap} label="Marksheets" value={marksheets.length} />
+          <CountCard icon={Award} label="Certificates" value={certificates.length} />
+        </div>
+
         <section>
           <div className="flex items-center gap-2 mb-6">
             <BookOpen className="text-theme-soft" size={18} />
@@ -241,6 +248,26 @@ function SummaryCard({ icon: Icon, label, value, highlight, dimmed }: SummaryCar
         <Icon size={12} /> {label}
       </div>
       <p className={`text-sm font-black uppercase tracking-wide ${dimmed ? "text-white/40" : ""}`}>{value}</p>
+    </div>
+  );
+}
+
+function CountCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+      <div className="grid h-9 w-9 place-items-center rounded-xl bg-theme-soft/10 text-theme-soft mb-3">
+        <Icon size={16} />
+      </div>
+      <p className="text-2xl font-black">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mt-1">{label}</p>
     </div>
   );
 }

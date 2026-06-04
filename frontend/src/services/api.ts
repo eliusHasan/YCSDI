@@ -357,6 +357,45 @@ export const studentApi = {
   me: () => api.get<StudentMeResponse>("/students/me"),
 };
 
+export interface AdminStatRecentStudent {
+  _id: string;
+  fullName: string;
+  registrationId: string;
+  serialNo?: string;
+  status: StudentStatus;
+  photoUrl: string;
+  createdAt: string;
+  instituteId?: { code: string };
+  preferredCourseId?: { title: string };
+}
+
+export interface AdminStats {
+  students: { total: number; pending: number; approved: number; rejected: number; banned: number };
+  courses: { total: number; published: number };
+  institutes: { total: number; active: number };
+  staff: { total: number };
+  enrollments: { total: number };
+  documents: { registration: number; admit: number; marksheet: number; certificate: number; total: number };
+  recentStudents: AdminStatRecentStudent[];
+}
+
+export interface StaffStats {
+  institutes: { name: string; code: string }[];
+  students: { total: number; approved: number; pending: number };
+  enrollments: { active: number; completed: number; total: number };
+  certificates: { total: number };
+  marksheets: { total: number };
+  recentStudents: Array<{ _id: string; fullName: string; registrationId: string; photoUrl: string; createdAt: string; instituteId?: { code: string } }>;
+}
+
+export const adminStatsApi = {
+  get: () => api.get<AdminStats>("/admin/stats"),
+};
+
+export const staffStatsApi = {
+  get: () => api.get<StaffStats>("/staff/stats"),
+};
+
 export const adminApi = {
   getStudents: () => api.get<Student[]>("/admin/students"),
   approveStudent: (studentId: string, payload: ApprovalPayload) =>
