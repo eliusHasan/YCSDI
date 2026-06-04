@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Loader2,
   Lock,
+  Pencil,
   Search,
   ShieldCheck,
   Trash2,
@@ -20,6 +21,7 @@ import {
   adminApi,
   instituteApi,
   publicCourseApi,
+  type AdminStudentUpdatePayload,
   type ApprovalPayload,
   type Course,
   type Institute,
@@ -46,6 +48,38 @@ function buildEmptyApproval(prefillUserId: string): ApprovalFormState {
   };
 }
 
+interface EditFormState {
+  fullName: string;
+  fatherName: string;
+  motherName: string;
+  gender: "male" | "female" | "other";
+  dateOfBirth: string;
+  postOffice: string;
+  upazilla: string;
+  district: string;
+  nidPassport: string;
+  mobileNumber: string;
+  email: string;
+  message: string;
+}
+
+function studentToEditForm(s: Student): EditFormState {
+  return {
+    fullName: s.fullName,
+    fatherName: s.fatherName,
+    motherName: s.motherName,
+    gender: s.gender,
+    dateOfBirth: s.dateOfBirth ? s.dateOfBirth.slice(0, 10) : "",
+    postOffice: s.postOffice,
+    upazilla: s.upazilla,
+    district: s.district,
+    nidPassport: s.nidPassport ?? "",
+    mobileNumber: s.mobileNumber,
+    email: s.email ?? "",
+    message: s.message ?? "",
+  };
+}
+
 export function AdminDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
@@ -59,6 +93,20 @@ export function AdminDashboard() {
   const [approval, setApproval] = useState<ApprovalFormState>(buildEmptyApproval(""));
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState<EditFormState | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editStudent) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEditStudent(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editStudent]);
 
   useEffect(() => {
     void loadAll();
@@ -90,6 +138,43 @@ export function AdminDashboard() {
     setApproval(prefilled);
     setError(null);
     setShowModal(true);
+  };
+
+  const openEdit = (student: Student) => {
+    setEditStudent(student);
+    setEditForm(studentToEditForm(student));
+    setEditError(null);
+  };
+
+  const handleEditSave = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editStudent || !editForm) return;
+    setSavingEdit(true);
+    setEditError(null);
+    const payload: AdminStudentUpdatePayload = {
+      fullName: editForm.fullName,
+      fatherName: editForm.fatherName,
+      motherName: editForm.motherName,
+      gender: editForm.gender,
+      dateOfBirth: editForm.dateOfBirth || undefined,
+      postOffice: editForm.postOffice,
+      upazilla: editForm.upazilla,
+      district: editForm.district,
+      nidPassport: editForm.nidPassport || undefined,
+      mobileNumber: editForm.mobileNumber,
+      email: editForm.email || undefined,
+      message: editForm.message || undefined,
+    };
+    try {
+      await adminApi.patchStudent(editStudent._id, payload);
+      setEditStudent(null);
+      setEditForm(null);
+      await loadAll();
+    } catch (err: any) {
+      setEditError(err.response?.data?.message ?? "Failed to save changes");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const toggleCourse = (id: string) => {
@@ -341,6 +426,13 @@ export function AdminDashboard() {
                               </button>
                             )}
                             <button
+                              onClick={() => openEdit(student)}
+                              className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors"
+                              title="Edit details"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
                               onClick={() => handleDelete(student)}
                               className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors"
                               title="Delete (cascade)"
@@ -515,6 +607,124 @@ export function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {editStudent && editForm && (
+        <div onClick={() => setEditStudent(null)} className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-2xl bg-theme-dark border border-white/10 rounded-[32px] p-8 pt-16 shadow-2xl my-8">
+              <button
+                onClick={() => setEditStudent(null)}
+                aria-label="Close"
+                className="absolute top-5 right-5 z-20 grid h-10 w-10 place-items-center rounded-xl bg-white/10 border border-white/10 text-white/70 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-12 w-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                  <img src={editStudent.photoUrl} alt="" className="h-full w-full object-cover" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-tight">Edit Student</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-0.5">
+                    {editStudent.fullName} · {editStudent.registrationId}
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleEditSave} className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <EditField label="Full Name *" value={editForm.fullName} onChange={(v) => setEditForm({ ...editForm, fullName: v })} required />
+                  <EditField label="Father's Name *" value={editForm.fatherName} onChange={(v) => setEditForm({ ...editForm, fatherName: v })} required />
+                  <EditField label="Mother's Name *" value={editForm.motherName} onChange={(v) => setEditForm({ ...editForm, motherName: v })} required />
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Gender *</label>
+                    <select
+                      value={editForm.gender}
+                      onChange={(e) => setEditForm({ ...editForm, gender: e.target.value as "male" | "female" | "other" })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-theme-soft/50 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="male" className="bg-theme-dark">Male</option>
+                      <option value="female" className="bg-theme-dark">Female</option>
+                      <option value="other" className="bg-theme-dark">Other</option>
+                    </select>
+                  </div>
+                  <EditField label="Date of Birth *" type="date" value={editForm.dateOfBirth} onChange={(v) => setEditForm({ ...editForm, dateOfBirth: v })} required />
+                  <EditField label="NID / Passport" value={editForm.nidPassport} onChange={(v) => setEditForm({ ...editForm, nidPassport: v })} />
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <EditField label="Post Office *" value={editForm.postOffice} onChange={(v) => setEditForm({ ...editForm, postOffice: v })} required />
+                  <EditField label="Upazilla *" value={editForm.upazilla} onChange={(v) => setEditForm({ ...editForm, upazilla: v })} required />
+                  <EditField label="District *" value={editForm.district} onChange={(v) => setEditForm({ ...editForm, district: v })} required />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <EditField label="Mobile *" value={editForm.mobileNumber} onChange={(v) => setEditForm({ ...editForm, mobileNumber: v })} required />
+                  <EditField label="Email" type="email" value={editForm.email} onChange={(v) => setEditForm({ ...editForm, email: v })} />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Message</label>
+                  <textarea
+                    value={editForm.message}
+                    onChange={(e) => setEditForm({ ...editForm, message: e.target.value })}
+                    rows={2}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 transition-all resize-none"
+                  />
+                </div>
+
+                {editError && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold uppercase tracking-widest text-center">
+                    {editError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditStudent(null)}
+                    className="py-3.5 rounded-xl border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEdit}
+                    className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
+                  >
+                    {savingEdit ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface EditFieldProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  type?: string;
+}
+
+function EditField({ label, value, onChange, required, type = "text" }: EditFieldProps) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all ${type === "date" ? "[color-scheme:dark]" : ""}`}
+      />
     </div>
   );
 }
