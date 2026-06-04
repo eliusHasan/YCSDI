@@ -62,12 +62,13 @@ export async function render(input: MarksheetInput): Promise<Buffer> {
       drawFrame(doc);
       drawWatermark(doc, BRAND.shortName);
 
-      // Header
+      // Header — title is centred in the band to the RIGHT of the logo so the
+      // logo never overlaps the institute name.
       doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11)
         .text(BRAND.govtLine, 0, 44, { align: "center" });
-      drawLogo(doc, 48, 58, 56);
-      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(17)
-        .text(BRAND.name, 0, 64, { align: "center", width: W });
+      drawLogo(doc, 46, 56, 52);
+      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(16)
+        .text(BRAND.name, 112, 70, { align: "center", width: W - 157 });
       drawBadge(doc, W / 2 - 95, 100, "Academic Transcript");
 
       // Serial No
