@@ -10,6 +10,7 @@ import {
   Hash,
   IdCard,
   Loader2,
+  RefreshCw,
   Save,
   Trash2,
 } from "lucide-react";
@@ -181,6 +182,7 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
   });
   const [saving, setSaving] = useState(false);
   const [issuing, setIssuing] = useState<DocumentType | null>(null);
+  const [regenerating, setRegenerating] = useState<DocumentType | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   const setId = (k: keyof typeof identity, v: string) => setIdentity((f) => ({ ...f, [k]: v }));
@@ -225,6 +227,20 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
       setMsg(e.response?.data?.message ?? "Issue failed");
     } finally {
       setIssuing(null);
+    }
+  };
+
+  const regenerate = async (type: DocumentType, id: string) => {
+    setRegenerating(type);
+    setMsg(null);
+    try {
+      await documentApi.regenerate(type, id);
+      setMsg(`${type} regenerated`);
+      onChanged();
+    } catch (e: any) {
+      setMsg(e.response?.data?.message ?? "Regenerate failed");
+    } finally {
+      setRegenerating(null);
     }
   };
 
@@ -345,6 +361,7 @@ function EnrollmentPanel({ enrollment, documents, onChanged }: PanelProps) {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <a href={existing.pdfUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="View"><ExternalLink size={13} /></a>
                     <a href={existing.pdfUrl} download className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors" title="Download"><Download size={13} /></a>
+                    <button onClick={() => regenerate(meta.type, existing._id)} disabled={!!regenerating || (blocked)} title="Regenerate from current data" className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors disabled:opacity-40"><RefreshCw size={13} className={regenerating === meta.type ? "animate-spin" : ""} /></button>
                     <button onClick={() => removeDoc(meta.type, existing._id)} className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors" title="Delete"><Trash2 size={13} /></button>
                   </div>
                 ) : (

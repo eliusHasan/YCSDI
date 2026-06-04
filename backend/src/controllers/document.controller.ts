@@ -245,154 +245,226 @@ export class DocumentController {
     const serialNo = await generateSerialNo();
     const issuedAt = new Date();
     const exam = examDate ? new Date(examDate) : issuedAt;
+    const certificateNumber = type === "certificate" ? await generateCertificateNumber() : undefined;
 
     try {
-      if (type === "registration") {
-        const pdfUrl = await generateAndUploadRegistrationCard({
-          serialNo,
-          studentName: s.fullName,
-          fatherName: s.fatherName,
-          motherName: s.motherName,
-          gender: s.gender,
-          instituteName: enrollment.instituteId.name,
-          postOffice: s.postOffice,
-          upazilla: s.upazilla,
-          district: s.district,
-          courseTitle: enrollment.courseId.title,
-          courseCode: enrollment.courseId.category ?? "",
-          registrationNo: registrationNo!,
-          rollNo: rollNo!,
-          session: enrollment.session ?? "",
-          photoUrl: s.photoUrl,
-        });
-        const doc = await RegistrationCard.create({
-          enrollmentId: enrollment._id,
-          studentId: s._id,
-          courseId: enrollment.courseId._id,
-          instituteId: enrollment.instituteId._id,
-          serialNo,
-          issuedByAdminId: req.user._id,
-          issuedAt,
-          pdfUrl,
-        });
-        res.status(201).json(await DocumentController.populateOne("registration", doc._id));
-        return;
-      }
-
-      if (type === "admit") {
-        const pdfUrl = await generateAndUploadAdmitCard({
-          serialNo,
-          instituteName: enrollment.instituteId.name,
-          studentName: s.fullName,
-          fatherName: s.fatherName,
-          motherName: s.motherName,
-          dateOfBirth: new Date(s.dateOfBirth),
-          session: enrollment.session ?? "",
-          subjectName: enrollment.courseId.title,
-          rollNo: rollNo!,
-          registrationNo: registrationNo!,
-          sex: s.gender,
-          photoUrl: s.photoUrl,
-        });
-        const doc = await AdmitCard.create({
-          enrollmentId: enrollment._id,
-          studentId: s._id,
-          courseId: enrollment.courseId._id,
-          instituteId: enrollment.instituteId._id,
-          serialNo,
-          examDate: examDate ? exam : undefined,
-          issuedByAdminId: req.user._id,
-          issuedAt,
-          pdfUrl,
-        });
-        res.status(201).json(await DocumentController.populateOne("admit", doc._id));
-        return;
-      }
-
-      if (type === "marksheet") {
-        const r = enrollment.result!;
-        const subjects = (r.subjects ?? []).map((sub) => ({
-          name: sub.name,
-          fullMark: sub.fullMark,
-          obtainedMark: sub.obtainedMark,
-          letterGrade: sub.letterGrade,
-          gradePoint: sub.gradePoint,
-        }));
-        const totalFull = r.totalFull ?? subjects.reduce((a, x) => a + x.fullMark, 0);
-        const totalObtained = r.totalObtained ?? subjects.reduce((a, x) => a + x.obtainedMark, 0);
-        const pdfUrl = await generateAndUploadMarksheet({
-          serialNo,
-          studentName: s.fullName,
-          fatherName: s.fatherName,
-          motherName: s.motherName,
-          rollNo: rollNo!,
-          registrationNo: registrationNo!,
-          instituteName: enrollment.instituteId.name,
-          courseTitle: enrollment.courseId.title,
-          courseDuration: enrollment.courseId.duration ?? "",
-          session: enrollment.session ?? "",
-          subjects,
-          totalFull,
-          totalObtained,
-          letterGrade: r.letterGrade ?? "",
-          cgpa: r.cgpa ?? 0,
-        });
-        const doc = await Marksheet.create({
-          enrollmentId: enrollment._id,
-          studentId: s._id,
-          courseId: enrollment.courseId._id,
-          instituteId: enrollment.instituteId._id,
-          serialNo,
-          subjects,
-          totalFull,
-          totalObtained,
-          letterGrade: r.letterGrade ?? "",
-          cgpa: r.cgpa ?? 0,
-          issuedByAdminId: req.user._id,
-          issuedAt,
-          pdfUrl,
-        });
-        res.status(201).json(await DocumentController.populateOne("marksheet", doc._id));
-        return;
-      }
-
-      // certificate
-      const r = enrollment.result!;
-      const certificateNumber = await generateCertificateNumber();
-      const pdfUrl = await generateAndUploadCertificate({
-        serialNo,
-        certificateNumber,
-        studentName: s.fullName,
-        fatherName: s.fatherName,
-        motherName: s.motherName,
-        instituteName: enrollment.instituteId.name,
-        courseTitle: enrollment.courseId.title,
+      const built = await DocumentController.buildPdf(type, enrollment, serialNo, {
         rollNo: rollNo!,
         registrationNo: registrationNo!,
-        session: enrollment.session ?? "",
-        cgpa: r.cgpa,
-        letterGrade: r.letterGrade,
-        examDate: exam,
+        exam,
         issuedDate: issuedAt,
+        certificateNumber,
       });
-      const doc = await Certificate.create({
+      const base = {
         enrollmentId: enrollment._id,
         studentId: s._id,
         courseId: enrollment.courseId._id,
         instituteId: enrollment.instituteId._id,
-        certificateNumber,
         serialNo,
-        cgpa: r.cgpa,
-        letterGrade: r.letterGrade,
         issuedByAdminId: req.user._id,
         issuedAt,
-        pdfUrl,
-      });
-      res.status(201).json(await DocumentController.populateOne("certificate", doc._id));
+        pdfUrl: built.pdfUrl,
+      };
+      let doc;
+      if (type === "registration") doc = await RegistrationCard.create(base);
+      else if (type === "admit") doc = await AdmitCard.create({ ...base, examDate: examDate ? exam : undefined });
+      else if (type === "marksheet") doc = await Marksheet.create({ ...base, ...built.marksheet });
+      else doc = await Certificate.create({ ...base, certificateNumber, ...built.certificate });
+
+      res.status(201).json(await DocumentController.populateOne(type, doc._id));
     } catch (error) {
       console.error(`Failed to issue ${type}:`, error);
       res.status(500).json({ message: `Failed to issue ${type} document` });
     }
+  }
+
+  /**
+   * Admin: re-render an already-issued document from the CURRENT enrollment data,
+   * reusing the same serial number (so the verification link / QR stays valid).
+   * Useful after editing marks or student details.
+   */
+  static async regenerate(req: Request, res: Response) {
+    if (!req.user) {
+      res.status(401).json({ message: "Not authenticated" });
+      return;
+    }
+    const { type, id } = req.params;
+    if (!isType(type)) {
+      res.status(400).json({ message: "Invalid document type" });
+      return;
+    }
+    if (!isValidObjectId(id)) {
+      res.status(400).json({ message: "Invalid document id" });
+      return;
+    }
+
+    const existing = await MODEL_BY_TYPE[type].findById(id);
+    if (!existing) {
+      res.status(404).json({ message: "Document not found" });
+      return;
+    }
+
+    const enrollment = await populateEnrollment(Enrollment.findById(existing.enrollmentId)).lean<PopulatedEnrollment>();
+    if (!enrollment) {
+      res.status(404).json({ message: "Enrollment not found" });
+      return;
+    }
+
+    let { rollNo, registrationNo } = enrollment;
+    if (!rollNo || !registrationNo) {
+      const generated = await generateRollAndRegistration();
+      rollNo = rollNo || generated.rollNo;
+      registrationNo = registrationNo || generated.registrationNo;
+      await Enrollment.updateOne({ _id: enrollment._id }, { rollNo, registrationNo });
+    }
+
+    const needsResult = type === "marksheet" || type === "certificate";
+    if (
+      needsResult &&
+      (!enrollment.result || !enrollment.result.subjects?.length || enrollment.result.cgpa === undefined)
+    ) {
+      res.status(400).json({ message: "Enter and save subject marks before regenerating this document" });
+      return;
+    }
+
+    try {
+      const serialNo: string = existing.serialNo;
+      const issuedDate: Date = existing.issuedAt ?? new Date();
+      const exam: Date = (type === "admit" ? existing.examDate : undefined) ?? issuedDate;
+      const certificateNumber = type === "certificate" ? existing.certificateNumber : undefined;
+
+      const built = await DocumentController.buildPdf(type, enrollment, serialNo, {
+        rollNo: rollNo!,
+        registrationNo: registrationNo!,
+        exam,
+        issuedDate,
+        certificateNumber,
+      });
+
+      existing.pdfUrl = built.pdfUrl;
+      if (type === "marksheet" && built.marksheet) Object.assign(existing, built.marksheet);
+      if (type === "certificate" && built.certificate) Object.assign(existing, built.certificate);
+      await existing.save();
+
+      res.status(200).json(await DocumentController.populateOne(type, existing._id));
+    } catch (error) {
+      console.error(`Failed to regenerate ${type}:`, error);
+      res.status(500).json({ message: `Failed to regenerate ${type} document` });
+    }
+  }
+
+  /** Generates a document PDF from enrollment data and returns its URL + any result snapshot. */
+  private static async buildPdf(
+    type: DocType,
+    enrollment: PopulatedEnrollment,
+    serialNo: string,
+    ctx: { rollNo: string; registrationNo: string; exam: Date; issuedDate: Date; certificateNumber?: string },
+  ): Promise<{
+    pdfUrl: string;
+    marksheet?: {
+      subjects: Array<{ name: string; fullMark: number; obtainedMark: number; letterGrade: string; gradePoint: number }>;
+      totalFull: number;
+      totalObtained: number;
+      letterGrade: string;
+      cgpa: number;
+    };
+    certificate?: { cgpa?: number; letterGrade?: string };
+  }> {
+    const s = enrollment.studentId;
+    const { rollNo, registrationNo } = ctx;
+
+    if (type === "registration") {
+      const pdfUrl = await generateAndUploadRegistrationCard({
+        serialNo,
+        studentName: s.fullName,
+        fatherName: s.fatherName,
+        motherName: s.motherName,
+        gender: s.gender,
+        instituteName: enrollment.instituteId.name,
+        postOffice: s.postOffice,
+        upazilla: s.upazilla,
+        district: s.district,
+        courseTitle: enrollment.courseId.title,
+        courseCode: enrollment.courseId.category ?? "",
+        registrationNo,
+        rollNo,
+        session: enrollment.session ?? "",
+        photoUrl: s.photoUrl,
+      });
+      return { pdfUrl };
+    }
+
+    if (type === "admit") {
+      const pdfUrl = await generateAndUploadAdmitCard({
+        serialNo,
+        instituteName: enrollment.instituteId.name,
+        studentName: s.fullName,
+        fatherName: s.fatherName,
+        motherName: s.motherName,
+        dateOfBirth: new Date(s.dateOfBirth),
+        session: enrollment.session ?? "",
+        subjectName: enrollment.courseId.title,
+        rollNo,
+        registrationNo,
+        sex: s.gender,
+        photoUrl: s.photoUrl,
+      });
+      return { pdfUrl };
+    }
+
+    if (type === "marksheet") {
+      const r = enrollment.result!;
+      const subjects = (r.subjects ?? []).map((sub) => ({
+        name: sub.name,
+        fullMark: sub.fullMark,
+        obtainedMark: sub.obtainedMark,
+        letterGrade: sub.letterGrade,
+        gradePoint: sub.gradePoint,
+      }));
+      const totalFull = r.totalFull ?? subjects.reduce((a, x) => a + x.fullMark, 0);
+      const totalObtained = r.totalObtained ?? subjects.reduce((a, x) => a + x.obtainedMark, 0);
+      const pdfUrl = await generateAndUploadMarksheet({
+        serialNo,
+        studentName: s.fullName,
+        fatherName: s.fatherName,
+        motherName: s.motherName,
+        rollNo,
+        registrationNo,
+        instituteName: enrollment.instituteId.name,
+        courseTitle: enrollment.courseId.title,
+        courseDuration: enrollment.courseId.duration ?? "",
+        session: enrollment.session ?? "",
+        subjects,
+        totalFull,
+        totalObtained,
+        letterGrade: r.letterGrade ?? "",
+        cgpa: r.cgpa ?? 0,
+      });
+      return {
+        pdfUrl,
+        marksheet: { subjects, totalFull, totalObtained, letterGrade: r.letterGrade ?? "", cgpa: r.cgpa ?? 0 },
+      };
+    }
+
+    // certificate
+    const r = enrollment.result!;
+    const pdfUrl = await generateAndUploadCertificate({
+      serialNo,
+      certificateNumber: ctx.certificateNumber!,
+      studentName: s.fullName,
+      fatherName: s.fatherName,
+      motherName: s.motherName,
+      instituteName: enrollment.instituteId.name,
+      courseTitle: enrollment.courseId.title,
+      rollNo,
+      registrationNo,
+      session: enrollment.session ?? "",
+      cgpa: r.cgpa,
+      letterGrade: r.letterGrade,
+      examDate: ctx.exam,
+      issuedDate: ctx.issuedDate,
+    });
+    return { pdfUrl, certificate: { cgpa: r.cgpa, letterGrade: r.letterGrade } };
   }
 
   private static populateOne(type: DocType, id: unknown) {

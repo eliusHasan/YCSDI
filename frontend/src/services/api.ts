@@ -376,6 +376,8 @@ export const documentApi = {
   list: <T = IssuedDocument>(type: DocumentType) => api.get<T[]>(`/admin/documents/${type}`),
   issue: <T = IssuedDocument>(type: DocumentType, enrollmentId: string, examDate?: string) =>
     api.post<T>(`/admin/documents/${type}`, { enrollmentId, examDate }),
+  regenerate: <T = IssuedDocument>(type: DocumentType, id: string) =>
+    api.post<T>(`/admin/documents/${type}/${id}/regenerate`),
   remove: (type: DocumentType, id: string) =>
     api.delete<{ message: string }>(`/admin/documents/${type}/${id}`),
 };
