@@ -7,7 +7,10 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
+  FileText,
+  GraduationCap,
   Hash,
+  IdCard,
   Loader2,
   LogOut,
   ShieldCheck,
@@ -15,7 +18,11 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { studentApi, type StudentMeResponse } from "../../services/api";
+import { studentApi, type CertificateCourseRef, type StudentMeResponse } from "../../services/api";
+
+function courseTitle(courseId: CertificateCourseRef | string): string {
+  return typeof courseId === "object" && courseId ? courseId.title : "Document";
+}
 import { useAuthStore } from "../../stores/auth";
 
 export function StudentDashboard() {
@@ -73,7 +80,7 @@ export function StudentDashboard() {
     );
   }
 
-  const { student, enrollments, certificates } = data;
+  const { student, enrollments, certificates, registrationCards, admitCards, marksheets } = data;
 
   return (
     <main className="min-h-screen bg-theme-dark text-white">
@@ -108,7 +115,7 @@ export function StudentDashboard() {
           <SummaryCard
             icon={Hash}
             label="Serial Number"
-            value={student.registrationId}
+            value={student.serialNo ?? student.registrationId}
             highlight
           />
           <SummaryCard
@@ -190,70 +197,26 @@ export function StudentDashboard() {
           )}
         </section>
 
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <Award className="text-theme-soft" size={18} />
-            <h2 className="text-xs font-black uppercase tracking-widest text-white/60">Certificates ({certificates.length})</h2>
-          </div>
-          {certificates.length === 0 ? (
-            <div className="rounded-[32px] bg-white/5 border border-white/10 p-10 text-center">
-              <Award className="text-white/20 mx-auto mb-4" size={36} />
-              <p className="text-white/40 text-sm font-bold uppercase tracking-widest">No certificates yet</p>
-              <p className="text-white/20 text-[10px] font-bold uppercase tracking-widest mt-2">
-                Certificates appear here once admin issues them for completed courses
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {certificates.map((cert) => {
-                const course = typeof cert.courseId === "object" ? cert.courseId : null;
-                return (
-                  <article
-                    key={cert._id}
-                    className="rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/[0.08] transition-colors"
-                  >
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-theme-soft/20 text-theme-soft shrink-0">
-                        <Award size={18} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black uppercase tracking-tight truncate">
-                          {course?.title ?? "Certificate"}
-                        </p>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-theme-soft mt-1 flex items-center gap-1.5">
-                          <Hash size={10} />
-                          {cert.certificateNumber}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3 flex items-center gap-1.5">
-                      <Calendar size={10} /> Issued {new Date(cert.issuedAt).toLocaleDateString()}
-                    </p>
-                    <div className="flex gap-2">
-                      <a
-                        href={cert.pdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/10 text-white/70 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
-                      >
-                        <ExternalLink size={12} />
-                        View
-                      </a>
-                      <a
-                        href={cert.pdfUrl}
-                        download={`${cert.certificateNumber}.pdf`}
-                        className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
-                      >
-                        <Download size={12} />
-                        Download
-                      </a>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        <DocsGroup
+          icon={IdCard}
+          title="Registration Cards"
+          items={registrationCards.map((d) => ({ id: d._id, title: courseTitle(d.courseId), sub: `Serial ${d.serialNo}`, issuedAt: d.issuedAt, pdfUrl: d.pdfUrl }))}
+        />
+        <DocsGroup
+          icon={FileText}
+          title="Admit Cards"
+          items={admitCards.map((d) => ({ id: d._id, title: courseTitle(d.courseId), sub: `Serial ${d.serialNo}`, issuedAt: d.issuedAt, pdfUrl: d.pdfUrl }))}
+        />
+        <DocsGroup
+          icon={GraduationCap}
+          title="Marksheets"
+          items={marksheets.map((d) => ({ id: d._id, title: courseTitle(d.courseId), sub: `CGPA ${d.cgpa.toFixed(2)} · ${d.letterGrade}`, issuedAt: d.issuedAt, pdfUrl: d.pdfUrl }))}
+        />
+        <DocsGroup
+          icon={Award}
+          title="Certificates"
+          items={certificates.map((d) => ({ id: d._id, title: courseTitle(d.courseId), sub: d.certificateNumber, issuedAt: d.issuedAt, pdfUrl: d.pdfUrl }))}
+        />
       </div>
     </main>
   );
@@ -279,6 +242,74 @@ function SummaryCard({ icon: Icon, label, value, highlight, dimmed }: SummaryCar
       </div>
       <p className={`text-sm font-black uppercase tracking-wide ${dimmed ? "text-white/40" : ""}`}>{value}</p>
     </div>
+  );
+}
+
+interface DocItem {
+  id: string;
+  title: string;
+  sub: string;
+  issuedAt: string;
+  pdfUrl: string;
+}
+
+function DocsGroup({
+  icon: Icon,
+  title,
+  items,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  title: string;
+  items: DocItem[];
+}) {
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-6">
+        <Icon className="text-theme-soft" size={18} />
+        <h2 className="text-xs font-black uppercase tracking-widest text-white/60">
+          {title} ({items.length})
+        </h2>
+      </div>
+      {items.length === 0 ? (
+        <div className="rounded-[32px] bg-white/5 border border-white/10 p-10 text-center">
+          <Icon className="text-white/20 mx-auto mb-4" size={36} />
+          <p className="text-white/40 text-sm font-bold uppercase tracking-widest">No {title.toLowerCase()} yet</p>
+          <p className="text-white/20 text-[10px] font-bold uppercase tracking-widest mt-2">
+            Issued by your institute once available
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {items.map((d) => (
+            <article key={d.id} className="rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/[0.08] transition-colors">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-theme-soft/20 text-theme-soft shrink-0">
+                  <Icon size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black uppercase tracking-tight truncate">{d.title}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-theme-soft mt-1 flex items-center gap-1.5">
+                    <Hash size={10} />
+                    {d.sub}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3 flex items-center gap-1.5">
+                <Calendar size={10} /> Issued {new Date(d.issuedAt).toLocaleDateString()}
+              </p>
+              <div className="flex gap-2">
+                <a href={d.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/10 text-white/70 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all">
+                  <ExternalLink size={12} /> View
+                </a>
+                <a href={d.pdfUrl} download className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all">
+                  <Download size={12} /> Download
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

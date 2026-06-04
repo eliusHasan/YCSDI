@@ -1,6 +1,7 @@
 import {
   User, Mail, Phone, UserPlus, ArrowLeft, ArrowRight, Calendar,
-  MapPin, IdCard, MessageSquare, Upload, Users, Loader2, BookOpen, Building2, GraduationCap
+  MapPin, IdCard, MessageSquare, Upload, Users, Loader2, BookOpen, Building2, GraduationCap,
+  CheckCircle2, Copy, Check, Hash, ShieldCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState, ChangeEvent, FormEvent } from "react";
@@ -18,6 +19,8 @@ export function RegistrationPage() {
   const [courseId, setCourseId] = useState("");
   const [instituteId, setInstituteId] = useState("");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [success, setSuccess] = useState<{ serialNo: string; registrationId: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     publicCourseApi.list().then((r) => setCourses(r.data)).catch(() => {});
@@ -49,6 +52,17 @@ export function RegistrationPage() {
     setCropSrc(null);
   };
 
+  const handleCopySerial = async () => {
+    if (!success) return;
+    try {
+      await navigator.clipboard.writeText(success.serialNo);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage(null);
@@ -76,12 +90,13 @@ export function RegistrationPage() {
 
     try {
       const response = await studentApi.register(formData);
-      setMessage({ type: 'success', text: response.data.message });
       (e.target as HTMLFormElement).reset();
       setPhoto(null);
       setPhotoPreview(null);
       setCourseId("");
       setInstituteId("");
+      setSuccess({ serialNo: response.data.serialNo, registrationId: response.data.registrationId });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error: any) {
       setMessage({
         type: 'error',
@@ -124,7 +139,56 @@ export function RegistrationPage() {
         <div className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-theme-soft/20 via-white/5 to-theme-accent/20 rounded-[32px] blur-md opacity-40 group-hover:opacity-100 transition duration-700" />
           <div className="relative bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 sm:p-10 shadow-2xl overflow-hidden">
-            
+
+            {success ? (
+              <div className="text-center py-6">
+                <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/15 border border-green-500/30 text-green-400 mb-6">
+                  <CheckCircle2 size={32} />
+                </div>
+                <h2 className="text-2xl font-black text-white tracking-tight mb-2">Registration Successful!</h2>
+                <p className="text-white/50 text-sm font-medium max-w-md mx-auto mb-8">
+                  Your application is pending review. <span className="text-theme-soft font-bold">Save your serial number</span> — you'll need it to track your application and verify your documents.
+                </p>
+
+                <div className="max-w-sm mx-auto rounded-2xl bg-theme-soft/10 border border-theme-soft/30 p-6 mb-4">
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-theme-soft mb-2 flex items-center justify-center gap-1.5">
+                    <ShieldCheck size={12} /> Your Serial Number
+                  </p>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-3xl font-black text-white tracking-[0.15em] tabular-nums">{success.serialNo}</span>
+                    <button
+                      type="button"
+                      onClick={handleCopySerial}
+                      title="Copy serial number"
+                      className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-all"
+                    >
+                      {copied ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-8 flex items-center justify-center gap-1.5">
+                  <Hash size={11} className="text-theme-soft" /> Registration ID: {success.registrationId}
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => { setSuccess(null); setMessage(null); }}
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-white/10 text-white/70 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
+                  >
+                    <UserPlus size={14} /> Register Another
+                  </button>
+                  <Link
+                    to="/verify"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
+                  >
+                    <ShieldCheck size={14} /> Verify a Document
+                  </Link>
+                </div>
+              </div>
+            ) : (
+            <>
             {message && (
               <div className={`mb-6 p-4 rounded-xl border ${message.type === 'success' ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-red-500/10 border-red-500/50 text-red-400'} text-xs font-bold uppercase tracking-widest text-center`}>
                 {message.text}
@@ -443,6 +507,8 @@ export function RegistrationPage() {
                 <ArrowRight size={16} className="transition-transform group-hover:translate-x-1 text-theme-soft" />
               </Link>
             </div>
+            </>
+            )}
           </div>
         </div>
       </div>

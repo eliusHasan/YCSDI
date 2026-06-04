@@ -1,4 +1,4 @@
-import { Award, BookOpen, Building2, GraduationCap, Home, LogOut, ShieldCheck, UsersRound } from "lucide-react";
+import { BookOpen, Building2, FileText, GraduationCap, Home, LogOut, ShieldCheck, UsersRound } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/auth";
 
@@ -7,7 +7,7 @@ const navItems = [
   { to: "/admin/courses", label: "Courses", icon: BookOpen },
   { to: "/admin/institutes", label: "Institutes", icon: Building2 },
   { to: "/admin/staff", label: "Staff", icon: UsersRound },
-  { to: "/admin/certificates", label: "Certificates", icon: Award },
+  { to: "/admin/documents", label: "Documents", icon: FileText },
 ];
 
 export function AdminLayout() {

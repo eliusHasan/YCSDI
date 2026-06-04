@@ -7,8 +7,8 @@ import morgan from "morgan";
 import { requireAuth, requireRole } from "./middleware/auth.middleware.js";
 import { adminStudentRoutes } from "./routes/admin.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
-import { certificateRoutes } from "./routes/certificate.routes.js";
 import { courseRoutes } from "./routes/course.routes.js";
+import { documentRoutes } from "./routes/documents.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { instituteRoutes } from "./routes/institute.routes.js";
 import { publicRoutes } from "./routes/public.routes.js";
@@ -75,7 +75,7 @@ export function createApp() {
   app.use("/api/v1/admin/institutes", instituteRoutes);
   app.use("/api/v1/admin/staff", staffRoutes);
   app.use("/api/v1/admin/courses", courseRoutes);
-  app.use("/api/v1/admin/certificates", certificateRoutes);
+  app.use("/api/v1/admin/documents", documentRoutes);
 
   app.use("/api/v1/staff", requireAuth, requireRole("staff"));
   app.use("/api/v1/staff/students", staffStudentRoutes);

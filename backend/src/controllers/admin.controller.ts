@@ -1,7 +1,10 @@
 import type { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
+import { AdmitCard } from "../models/AdmitCard.js";
 import { Certificate } from "../models/Certificate.js";
 import { Course } from "../models/Course.js";
+import { Marksheet } from "../models/Marksheet.js";
+import { RegistrationCard } from "../models/RegistrationCard.js";
 import { Enrollment } from "../models/Enrollment.js";
 import { Institute } from "../models/Institute.js";
 import { Student } from "../models/Student.js";
@@ -111,12 +114,16 @@ export class AdminController {
       student.userId = user._id as typeof student.userId;
       await student.save();
 
+      // Allocate unique roll & registration numbers per enrollment.
+      const baseCount = await Enrollment.countDocuments();
       const enrollmentDocs = await Enrollment.insertMany(
-        (enrollments as ApprovalEnrollmentInput[]).map((e) => ({
+        (enrollments as ApprovalEnrollmentInput[]).map((e, i) => ({
           studentId: student._id,
           courseId: e.courseId,
           instituteId: institute._id,
           session: e.session ?? session ?? undefined,
+          rollNo: (1000 + baseCount + i + 1).toString(),
+          registrationNo: (100000 + baseCount + i + 1).toString(),
         })),
       );
 
@@ -204,7 +211,12 @@ export class AdminController {
 
     // Cascade
     if (student.userId) await User.deleteOne({ _id: student.userId });
-    await Certificate.deleteMany({ studentId: student._id });
+    await Promise.all([
+      Certificate.deleteMany({ studentId: student._id }),
+      RegistrationCard.deleteMany({ studentId: student._id }),
+      AdmitCard.deleteMany({ studentId: student._id }),
+      Marksheet.deleteMany({ studentId: student._id }),
+    ]);
     await Enrollment.deleteMany({ studentId: student._id });
     await Student.deleteOne({ _id: student._id });
 

@@ -140,6 +140,7 @@ export interface Student {
   message?: string;
   photoUrl: string;
   status: StudentStatus;
+  serialNo?: string;
   registrationId: string;
   instituteId?: StudentInstituteRef;
   preferredInstituteId?: StudentInstituteRef;
@@ -160,14 +161,35 @@ export interface EnrollmentCourseRef {
   duration?: string;
   level?: string;
   category?: string;
+  subjects?: string[];
+}
+
+export interface SubjectResult {
+  name: string;
+  fullMark: number;
+  obtainedMark: number;
+  letterGrade: string;
+  gradePoint: number;
+}
+
+export interface EnrollmentResult {
+  subjects: SubjectResult[];
+  totalFull?: number;
+  totalObtained?: number;
+  letterGrade?: string;
+  cgpa?: number;
+  published: boolean;
 }
 
 export interface Enrollment {
   _id: string;
   studentId: string;
   courseId: EnrollmentCourseRef;
-  instituteId: string;
+  instituteId: string | StudentInstituteRef;
   session?: string;
+  rollNo?: string;
+  registrationNo?: string;
+  result?: EnrollmentResult;
   status: EnrollmentStatus;
   enrolledAt: string;
   completedAt?: string;
@@ -179,6 +201,9 @@ export interface StudentMeResponse {
   student: Student;
   enrollments: Enrollment[];
   certificates: Certificate[];
+  registrationCards: IssuedDocument[];
+  admitCards: IssuedDocument[];
+  marksheets: Marksheet[];
 }
 
 export interface ApprovalEnrollmentInput {
@@ -238,18 +263,63 @@ export interface CertificateIssuerRef {
   userId: string;
 }
 
-export interface Certificate {
+export type DocumentType = "registration" | "admit" | "marksheet" | "certificate";
+
+/** Shared shape for an issued document (registration card / admit card / certificate). */
+export interface IssuedDocument {
   _id: string;
   enrollmentId: string;
   studentId: CertificateStudentRef | string;
   courseId: CertificateCourseRef | string;
   instituteId: CertificateInstituteRef | string;
-  certificateNumber: string;
-  issuedByAdminId: CertificateIssuerRef | string;
+  serialNo: string;
+  issuedByAdminId?: CertificateIssuerRef | string;
   issuedAt: string;
   pdfUrl: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Certificate extends IssuedDocument {
+  certificateNumber: string;
+  cgpa?: number;
+  letterGrade?: string;
+}
+
+export interface Marksheet extends IssuedDocument {
+  subjects: SubjectResult[];
+  totalFull: number;
+  totalObtained: number;
+  letterGrade: string;
+  cgpa: number;
+}
+
+export interface StudentDocumentsBundle {
+  registrationCards: IssuedDocument[];
+  admitCards: IssuedDocument[];
+  marksheets: Marksheet[];
+  certificates: Certificate[];
+}
+
+export interface AdminStudentDetailResponse {
+  student: Student;
+  enrollments: Enrollment[];
+  documents: StudentDocumentsBundle;
+}
+
+export interface SubjectMarkInput {
+  name: string;
+  fullMark: number;
+  obtainedMark: number;
+}
+
+export interface EnrollmentMarksPayload {
+  rollNo?: string;
+  registrationNo?: string;
+  session?: string;
+  subjects?: SubjectMarkInput[];
+  published?: boolean;
+  status?: EnrollmentStatus;
 }
 
 export interface AdminStudentUpdatePayload {
@@ -275,8 +345,15 @@ export const authApi = {
   me: () => api.get<{ user: AuthUser }>("/auth/me"),
 };
 
+export interface RegisterResponse {
+  message: string;
+  serialNo: string;
+  registrationId: string;
+  student: Student;
+}
+
 export const studentApi = {
-  register: (formData: FormData) => api.post("/students/register", formData),
+  register: (formData: FormData) => api.post<RegisterResponse>("/students/register", formData),
   me: () => api.get<StudentMeResponse>("/students/me"),
 };
 
@@ -291,11 +368,47 @@ export const adminApi = {
     api.delete<{ message: string }>(`/admin/students/${studentId}`),
 };
 
-export const adminCertificateApi = {
-  list: () => api.get<Certificate[]>("/admin/certificates"),
-  create: (enrollmentId: string) =>
-    api.post<Certificate>("/admin/certificates", { enrollmentId }),
-  remove: (id: string) => api.delete<{ message: string }>(`/admin/certificates/${id}`),
+export const documentApi = {
+  studentDetail: (studentId: string) =>
+    api.get<AdminStudentDetailResponse>(`/admin/documents/student/${studentId}`),
+  patchEnrollment: (enrollmentId: string, payload: EnrollmentMarksPayload) =>
+    api.patch<Enrollment>(`/admin/documents/enrollment/${enrollmentId}`, payload),
+  list: <T = IssuedDocument>(type: DocumentType) => api.get<T[]>(`/admin/documents/${type}`),
+  issue: <T = IssuedDocument>(type: DocumentType, enrollmentId: string, examDate?: string) =>
+    api.post<T>(`/admin/documents/${type}`, { enrollmentId, examDate }),
+  remove: (type: DocumentType, id: string) =>
+    api.delete<{ message: string }>(`/admin/documents/${type}/${id}`),
+};
+
+export interface VerifyResponse {
+  found: boolean;
+  type?: DocumentType;
+  label?: string;
+  document?: IssuedDocument & Record<string, unknown>;
+  message?: string;
+}
+
+export interface PublicResultResponse {
+  student: { _id: string; fullName: string; fatherName: string; motherName: string; registrationId: string; photoUrl: string };
+  course: { _id: string; title: string; slug: string; duration?: string; category?: string };
+  institute: { _id: string; name: string; code: string };
+  rollNo: string;
+  registrationNo: string;
+  session?: string;
+  result?: EnrollmentResult;
+  marksheetUrl: string | null;
+  serialNo: string | null;
+}
+
+export interface ResultLookupParams {
+  roll?: string;
+  registration?: string;
+  nid?: string;
+}
+
+export const publicVerifyApi = {
+  verify: (serial: string) => api.get<VerifyResponse>(`/public/verify/${serial}`),
+  result: (params: ResultLookupParams) => api.get<PublicResultResponse>("/public/result", { params }),
 };
 
 export const instituteApi = {

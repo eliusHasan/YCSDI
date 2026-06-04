@@ -17,6 +17,7 @@ export interface IStudent extends Document {
   message?: string;
   photoUrl: string;
   status: StudentStatus;
+  serialNo: string;
   registrationId: string;
   instituteId?: Types.ObjectId;
   preferredInstituteId?: Types.ObjectId;
@@ -37,12 +38,13 @@ const studentSchema = new Schema<IStudent>(
     postOffice: { type: String, required: true, trim: true },
     upazilla: { type: String, required: true, trim: true },
     district: { type: String, required: true, trim: true },
-    nidPassport: { type: String, trim: true },
+    nidPassport: { type: String, trim: true, index: true },
     mobileNumber: { type: String, required: true, trim: true },
     email: { type: String, trim: true, lowercase: true },
     message: { type: String, trim: true },
     photoUrl: { type: String, required: true },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", index: true },
+    serialNo: { type: String, unique: true, sparse: true, index: true },
     registrationId: { type: String, unique: true, index: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute" },
     preferredInstituteId: { type: Schema.Types.ObjectId, ref: "Institute" },

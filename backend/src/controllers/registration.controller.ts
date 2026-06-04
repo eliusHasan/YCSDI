@@ -3,6 +3,7 @@ import { isValidObjectId } from "mongoose";
 import { Course } from "../models/Course.js";
 import { Institute } from "../models/Institute.js";
 import { Student } from "../models/Student.js";
+import { generateSerialNo } from "../utils/serial.js";
 
 const ACCEPTED_FIELDS = [
   "fullName",
@@ -56,12 +57,14 @@ export class RegistrationController {
       const count = await Student.countDocuments();
       const year = new Date().getFullYear();
       const registrationId = `YCSDI-${year}-${(count + 1).toString().padStart(4, "0")}`;
+      const serialNo = await generateSerialNo();
 
       const newStudent = new Student({
         ...pickAccepted(req.body ?? {}),
         ...(preferredInstituteId ? { preferredInstituteId } : {}),
         ...(preferredCourseId ? { preferredCourseId } : {}),
         photoUrl: file.path,
+        serialNo,
         registrationId,
         status: "pending",
       });
@@ -70,6 +73,7 @@ export class RegistrationController {
 
       res.status(201).json({
         message: "Registration successful! Your application is pending review.",
+        serialNo,
         registrationId,
         student: newStudent,
       });

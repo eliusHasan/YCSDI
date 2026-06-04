@@ -2,8 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { AdminLayout } from "./components/layout/AdminLayout";
 import { PublicShell } from "./components/layout/PublicShell";
-import { AdminCertificatesPage } from "./pages/admin/AdminCertificatesPage";
 import { AdminCoursesPage } from "./pages/admin/AdminCoursesPage";
+import { AdminDocumentsPage } from "./pages/admin/AdminDocumentsPage";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminInstitutesPage } from "./pages/admin/AdminInstitutesPage";
 import { AdminStaffPage } from "./pages/admin/AdminStaffPage";
@@ -16,6 +16,7 @@ import { NoticesPage } from "./pages/public/NoticesPage";
 import { RegistrationPage } from "./pages/public/RegistrationPage";
 import { ResultPage } from "./pages/public/ResultPage";
 import { VerifiedInstitutePage } from "./pages/public/VerifiedInstitutePage";
+import { VerifyPage } from "./pages/public/VerifyPage";
 import { StaffDashboard } from "./pages/staff/StaffDashboard";
 import { StudentDashboard } from "./pages/student/StudentDashboard";
 
@@ -25,6 +26,8 @@ export default function App() {
       <Route element={<PublicShell />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/result" element={<ResultPage />} />
+        <Route path="/verify" element={<VerifyPage />} />
+        <Route path="/verify/:serial" element={<VerifyPage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:slug" element={<CourseDetailPage />} />
         <Route path="/verified-institute" element={<VerifiedInstitutePage />} />
@@ -47,7 +50,7 @@ export default function App() {
         <Route path="courses" element={<AdminCoursesPage />} />
         <Route path="institutes" element={<AdminInstitutesPage />} />
         <Route path="staff" element={<AdminStaffPage />} />
-        <Route path="certificates" element={<AdminCertificatesPage />} />
+        <Route path="documents" element={<AdminDocumentsPage />} />
       </Route>
 
       <Route
