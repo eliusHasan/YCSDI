@@ -28,6 +28,13 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
+/** The landing route for each role after login / when redirected. */
+export function roleHome(role: Role): string {
+  if (role === "admin") return "/admin";
+  if (role === "staff") return "/staff";
+  return "/student";
+}
+
 export function getAuthToken(): string | null {
   return useAuthStore.getState().token;
 }

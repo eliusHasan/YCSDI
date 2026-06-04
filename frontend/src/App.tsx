@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import { RequireAuth } from "./components/auth/RequireAuth";
+import { RedirectIfAuthenticated, RequireAuth } from "./components/auth/RequireAuth";
 import { AdminLayout } from "./components/layout/AdminLayout";
 import { PublicShell } from "./components/layout/PublicShell";
 import { AdminCoursesPage } from "./pages/admin/AdminCoursesPage";
@@ -35,7 +35,7 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/notices" element={<NoticesPage />} />
         <Route path="/registration" element={<RegistrationPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<RedirectIfAuthenticated><LoginPage /></RedirectIfAuthenticated>} />
       </Route>
 
       <Route
