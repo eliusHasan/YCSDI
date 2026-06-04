@@ -96,6 +96,17 @@ export function StaffDashboard() {
     void staffStatsApi.get().then((r) => setStats(r.data)).catch(() => {});
   }, []);
 
+  // Close the detail modal on Escape.
+  useEffect(() => {
+    if (!detail) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDetail();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail]);
+
   const loadList = async () => {
     setLoadingList(true);
     try {
@@ -344,14 +355,15 @@ export function StaffDashboard() {
       </div>
 
       {detail && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
+        <div onClick={closeDetail} className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
           <div className="flex min-h-full items-center justify-center p-4">
-          <div className="relative w-full max-w-3xl bg-theme-dark border border-white/10 rounded-[32px] p-8 shadow-2xl my-8">
+          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-3xl bg-theme-dark border border-white/10 rounded-[32px] p-8 pt-16 shadow-2xl my-8">
             <button
               onClick={closeDetail}
-              className="absolute top-6 right-6 p-2 rounded-lg text-white/40 hover:bg-white/5 hover:text-white transition-colors"
+              aria-label="Close"
+              className="absolute top-5 right-5 z-20 grid h-10 w-10 place-items-center rounded-xl bg-white/10 border border-white/10 text-white/70 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
 
             {detail.loading ? (
