@@ -8,6 +8,7 @@ import {
   Download,
   FileText,
   Hash,
+  Home,
   Loader2,
   LogOut,
   Mail,
@@ -21,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   staffStatsApi,
   staffStudentApi,
@@ -217,13 +218,22 @@ export function StaffDashboard() {
             </p>
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
-          >
-            <LogOut size={14} />
-            Sign Out
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
+            >
+              <Home size={14} />
+              View Site
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all"
+            >
+              <LogOut size={14} />
+              Sign Out
+            </button>
+          </div>
         </div>
 
         {stats && (
