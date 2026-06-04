@@ -68,14 +68,6 @@ export function AdminOverview() {
           <StatCard to="/admin/staff" icon={UsersRound} label="Staff" value={stats.staff.total} sub="members" />
         </div>
 
-        {/* Student status + enrollments */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MiniStat label="Pending Review" value={stats.students.pending} tone="amber" />
-          <MiniStat label="Approved" value={stats.students.approved} tone="green" />
-          <MiniStat label="Rejected" value={stats.students.rejected} tone="red" />
-          <MiniStat label="Enrollments" value={stats.enrollments.total} tone="soft" />
-        </div>
-
         {/* Documents issued */}
         <div>
           <div className="flex items-center gap-2 mb-4">
@@ -157,21 +149,6 @@ function StatCard({ to, icon: Icon, label, value, sub, highlight }: StatCardProp
       <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mt-1">{label}</p>
       <p className="text-[10px] font-bold text-white/30 mt-2">{sub}</p>
     </Link>
-  );
-}
-
-function MiniStat({ label, value, tone }: { label: string; value: number; tone: "amber" | "green" | "red" | "soft" }) {
-  const tones = {
-    amber: "text-amber-400",
-    green: "text-green-400",
-    red: "text-red-400",
-    soft: "text-theme-soft",
-  };
-  return (
-    <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
-      <p className={`text-2xl font-black ${tones[tone]}`}>{value}</p>
-      <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mt-1">{label}</p>
-    </div>
   );
 }
 
