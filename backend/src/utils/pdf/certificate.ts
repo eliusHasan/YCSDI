@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import {
   BRAND,
   COLORS,
+  drawLogo,
   drawSignature,
   formatDate,
   qrBuffer,
@@ -27,6 +28,46 @@ export interface CertificateInput {
 }
 
 const GRADING_MARKS = ["4.00 = 80% & Above", "3.75 = 75% & Above", "3.50 = 70% & Above", "3.25 = 65% & Above"];
+const NOTE_RED = "#B23B3B";
+
+/** Ornate gold certificate frame: thick outer band + chevron zig-zag + inner lines. */
+function drawBorder(doc: PDFKit.PDFDocument, W: number, H: number) {
+  doc.rect(0, 0, W, H).fill(COLORS.white);
+  doc.lineWidth(8).strokeColor(COLORS.gold).rect(16, 16, W - 32, H - 32).stroke();
+
+  // Chevron zig-zag band running just inside the outer line on all four edges.
+  doc.save();
+  doc.lineWidth(1.6).strokeColor(COLORS.goldDark);
+  const amp = 5;
+  const step = 13;
+  const zig = (pts: Array<[number, number]>) => {
+    doc.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i += 1) doc.lineTo(pts[i][0], pts[i][1]);
+    doc.stroke();
+  };
+  for (const yc of [30, H - 30]) {
+    const pts: Array<[number, number]> = [];
+    let up = true;
+    for (let x = 30; x <= W - 30; x += step) {
+      pts.push([x, yc + (up ? -amp : amp)]);
+      up = !up;
+    }
+    zig(pts);
+  }
+  for (const xc of [30, W - 30]) {
+    const pts: Array<[number, number]> = [];
+    let left = true;
+    for (let y = 30; y <= H - 30; y += step) {
+      pts.push([xc + (left ? -amp : amp), y]);
+      left = !left;
+    }
+    zig(pts);
+  }
+  doc.restore();
+
+  doc.lineWidth(1.5).strokeColor(COLORS.gold).rect(40, 40, W - 80, H - 80).stroke();
+  doc.lineWidth(0.8).strokeColor(COLORS.navy).rect(46, 46, W - 92, H - 92).stroke();
+}
 
 export async function render(input: CertificateInput): Promise<Buffer> {
   const qr = await qrBuffer(input.serialNo);
@@ -42,81 +83,76 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       const W = doc.page.width;
       const H = doc.page.height;
 
-      // Background + decorative gold frame
-      doc.rect(0, 0, W, H).fill(COLORS.white);
-      doc.lineWidth(8).strokeColor(COLORS.gold).rect(20, 20, W - 40, H - 40).stroke();
-      doc.lineWidth(2).strokeColor(COLORS.goldDark).rect(34, 34, W - 68, H - 68).stroke();
-      doc.lineWidth(0.8).strokeColor(COLORS.navy).rect(40, 40, W - 80, H - 80).stroke();
+      drawBorder(doc, W, H);
 
-      // Title band — laid out top-down so the (possibly two-line) brand name never overlaps.
-      const titleW = W - 120;
-      let cy = 56;
-      doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(26);
-      const nameH = doc.heightOfString(BRAND.name, { width: titleW, align: "center" });
-      doc.text(BRAND.name, 60, cy, { width: titleW, align: "center" });
-      cy += nameH + 4;
-      doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10)
-        .text(`${BRAND.website}  ·  ${BRAND.govtLine}`, 60, cy, { width: titleW, align: "center" });
-      cy += 20;
-      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(44)
-        .text("CERTIFICATE", 60, cy, { width: titleW, align: "center", characterSpacing: 4 });
-      cy += 62;
+      // Title block
+      const titleW = W - 160;
+      doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(25)
+        .text(BRAND.name, 80, 56, { width: titleW, align: "center" });
+      doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9.5)
+        .text(`${BRAND.website}   ·   ${BRAND.govtLine}`, 80, 88, { width: titleW, align: "center" });
+      drawLogo(doc, W / 2 - 22, 98, 44);
+      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(40)
+        .text("CERTIFICATE", 80, 152, { width: titleW, align: "center", characterSpacing: 5 });
 
-      // Right meta: Reg No + Session
-      const metaY = cy;
-      const metaX = W - 300;
-      doc.fillColor(COLORS.ink).font("Helvetica-Oblique").fontSize(12)
-        .text(`Reg. No: ${input.registrationNo}`, metaX, metaY, { width: 240 });
-      doc.text(`Session: ${input.session || "—"}`, metaX, metaY + 20, { width: 240 });
-
-      // Left meta: Serial No + grading marks + QR
+      // Meta row: Serial (left) · Reg + Session (right) — sits above the body.
+      const metaY = 212;
       doc.fillColor(COLORS.ink).font("Helvetica-Oblique").fontSize(12)
         .text(`Serial No: ${input.serialNo}`, 70, metaY);
+      doc.font("Helvetica-Oblique").fontSize(12)
+        .text(`Reg. No: ${input.registrationNo}`, W - 320, metaY, { width: 250, align: "left" });
+      doc.text(`Session: ${input.session || "—"}`, W - 320, metaY + 18, { width: 250, align: "left" });
 
-      const qrY = metaY + 40;
+      // Left column: QR + Grading Marks
+      const qrY = metaY + 42;
       doc.image(qr, 70, qrY, { width: 92, height: 92 });
-      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(11).text("Grading Marks", 70, qrY + 102, { width: 130, align: "center" });
+      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(11)
+        .text("Grading Marks", 60, qrY + 102, { width: 116, align: "center" });
       doc.fillColor(COLORS.ink).font("Helvetica").fontSize(9.5);
       GRADING_MARKS.forEach((g, i) => doc.text(g, 70, qrY + 120 + i * 16, { width: 150 }));
 
-      // Body text (right of the left meta column)
-      const bx = 210;
-      const bw = W - bx - 70;
-      let by = qrY;
-      const line = (label: string, value: string, tail?: string) => {
-        doc.fillColor(COLORS.ink).font("Helvetica-Oblique").fontSize(13).text(label, bx, by, { continued: true });
-        doc.font("Helvetica-BoldOblique").fontSize(14).fillColor(COLORS.navy).text(` ${value} `, { continued: !!tail });
-        if (tail) doc.font("Helvetica-Oblique").fontSize(12).fillColor(COLORS.muted).text(tail);
-        by += 30;
+      // Body — full-width fill-in lines with dotted leaders.
+      const bx = 235;
+      const rightX = W - 70;
+      type Seg = { t: string; b?: boolean; sm?: boolean };
+      const bodyLine = (by: number, parts: Seg[]) => {
+        let x = bx;
+        for (const p of parts) {
+          doc.font(p.b ? "Helvetica-BoldOblique" : "Helvetica-Oblique").fontSize(p.sm ? 11 : 13)
+            .fillColor(p.b ? COLORS.navy : p.sm ? COLORS.muted : COLORS.ink)
+            .text(p.t, x, by, { lineBreak: false });
+          x += doc.widthOfString(p.t);
+        }
+        doc.save();
+        doc.dash(1.5, { space: 3 }).lineWidth(0.7).strokeColor(COLORS.line);
+        doc.moveTo(Math.min(x + 8, rightX), by + 14).lineTo(rightX, by + 14).stroke();
+        doc.undash();
+        doc.restore();
       };
 
-      line("This is to certify that,", input.studentName);
-      line("Son/Daughter of", input.fatherName, "(Father)");
-      line("and", input.motherName, "(Mother)");
-      line("of", input.instituteName);
-      line("bearing Roll No.", input.rollNo, `duly passed the ${input.courseTitle} Examination`);
-
-      doc.fillColor(COLORS.ink).font("Helvetica-Oblique").fontSize(13)
-        .text("held in the month of ", bx, by, { continued: true });
-      doc.font("Helvetica-BoldOblique").fontSize(13).fillColor(COLORS.navy)
-        .text(formatDate(input.examDate), { continued: true });
-      doc.font("Helvetica-Oblique").fontSize(13).fillColor(COLORS.ink)
-        .text(`. He/She secured CGPA `, { continued: true });
-      doc.font("Helvetica-BoldOblique").fontSize(13).fillColor(COLORS.navy)
-        .text(`${(input.cgpa ?? 0).toFixed(2)}${input.letterGrade ? ` (${input.letterGrade})` : ""}`, { continued: true });
-      doc.font("Helvetica-Oblique").fontSize(13).fillColor(COLORS.ink)
-        .text(" on a scale of 4.00.", { continued: false });
+      const cgpaText = `${(input.cgpa ?? 0).toFixed(2)}${input.letterGrade ? ` (${input.letterGrade})` : ""}`;
+      let by = 262;
+      const gap = 30;
+      bodyLine(by, [{ t: "This is to certify that,  " }, { t: input.studentName, b: true }]); by += gap;
+      bodyLine(by, [{ t: "Son/Daughter of  " }, { t: input.fatherName, b: true }, { t: "   (Father)", sm: true }]); by += gap;
+      bodyLine(by, [{ t: "and  " }, { t: input.motherName, b: true }, { t: "   (Mother)", sm: true }]); by += gap;
+      bodyLine(by, [{ t: "of  " }, { t: input.instituteName, b: true }]); by += gap;
+      bodyLine(by, [{ t: "bearing Roll No.  " }, { t: input.rollNo, b: true }, { t: "  duly passed the  " }, { t: input.courseTitle, b: true }, { t: "  Examination" }]); by += gap;
+      bodyLine(by, [{ t: "held in the month of  " }, { t: formatDate(input.examDate), b: true }, { t: ".  He/She secured CGPA  " }, { t: cgpaText, b: true }, { t: "  on a scale of 4.00," }]); by += gap;
+      bodyLine(by, [{ t: "under the Skill Development Training Program of  " }, { t: BRAND.shortName, b: true }, { t: "." }]);
 
       // Footer: publication date + signatures
-      const footerY = H - 90;
+      const footerY = H - 96;
       doc.fillColor(COLORS.ink).font("Helvetica-Oblique").fontSize(11)
-        .text(`Date of Publication of Results: ${formatDate(input.issuedDate)}`, 70, footerY - 6, { width: 320 });
+        .text(`Date of Publication of Results: ${formatDate(input.issuedDate)}`, 70, footerY, { width: 320, lineBreak: false });
+      drawSignature(doc, W / 2 - 75, footerY + 26, 150, "Exam Controller");
+      drawSignature(doc, W - 235, footerY + 26, 165, "Chairman", undefined, "signature-2.png");
 
-      drawSignature(doc, W / 2 - 60, footerY + 20, 130, "Exam Controller");
-      drawSignature(doc, W - 230, footerY + 20, 160, "Chairman", undefined, "signature-2.png");
-
-      doc.fillColor(COLORS.muted).font("Helvetica-Oblique").fontSize(8)
-        .text(`Certificate No: ${input.certificateNumber}`, 0, H - 30, { align: "center", width: W });
+      // Bottom note + tiny identifiers
+      doc.fillColor(NOTE_RED).font("Helvetica-Oblique").fontSize(8.5)
+        .text("Note: This certificate is issued without any alteration or erasure.", 0, H - 42, { align: "center", width: W });
+      doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7)
+        .text(`Certificate No: ${input.certificateNumber}`, 70, H - 30, { lineBreak: false });
 
       doc.end();
     } catch (err) {
