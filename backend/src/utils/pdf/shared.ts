@@ -33,12 +33,17 @@ const ASSETS_DIR = process.env.DOCUMENT_ASSETS_DIR ?? resolve(process.cwd(), "as
 
 const assetCache = new Map<string, Buffer | null>();
 
-/** Loads an optional brand asset, returning null (cached) when it isn't present. */
+/**
+ * Loads an optional brand asset. Only successful reads are cached, so an asset
+ * dropped in after the server started is picked up on the next render without a
+ * restart (caching a null would otherwise mask a later-added file).
+ */
 export function loadAsset(fileName: string): Buffer | null {
-  if (assetCache.has(fileName)) return assetCache.get(fileName) ?? null;
+  const cached = assetCache.get(fileName);
+  if (cached) return cached;
   const full = resolve(ASSETS_DIR, fileName);
   const buf = existsSync(full) ? readFileSync(full) : null;
-  assetCache.set(fileName, buf);
+  if (buf) assetCache.set(fileName, buf);
   return buf;
 }
 

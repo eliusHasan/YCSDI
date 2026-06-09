@@ -107,9 +107,9 @@ export async function render(input: CertificateInput): Promise<Buffer> {
         .text(BRAND.name, 80, 56, { width: titleW, align: "center" });
       doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9.5)
         .text(`${BRAND.website}   ·   ${BRAND.govtLine}`, 80, 88, { width: titleW, align: "center" });
-      drawLogo(doc, W / 2 - 22, 98, 44);
+      drawLogo(doc, W / 2 - 30, 96, 60);
       doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(40)
-        .text("CERTIFICATE", 80, 152, { width: titleW, align: "center", characterSpacing: 5 });
+        .text("CERTIFICATE", 80, 162, { width: titleW, align: "center", characterSpacing: 5 });
 
       // Meta row: Serial (left) · Reg + Session (right) — sits above the body.
       const metaY = 212;
