@@ -56,9 +56,11 @@ const Header = () => {
           <div className="flex items-center justify-between gap-8">
             {/* Elite Logo */}
             <Link to="/" className="flex items-center gap-4 group">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-theme-dark text-[10px] font-black text-theme-soft shadow-lg shadow-theme-dark/10 ring-1 ring-theme-soft/20 transition-transform duration-500 group-hover:scale-105">
-                YCSDI
-              </span>
+              <img
+                src="/logo.png"
+                alt="YCSDI logo"
+                className="h-12 w-12 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105"
+              />
               <div className="flex flex-col">
                 <span className="text-base font-black uppercase leading-none tracking-tight text-theme-dark">Youth Career <span className="text-theme-accent">&</span></span>
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-theme-accent">Skill Development</span>

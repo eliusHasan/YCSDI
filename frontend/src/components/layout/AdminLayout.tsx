@@ -32,8 +32,8 @@ export function AdminLayout() {
       <div className="flex">
         <aside className="hidden lg:flex w-64 shrink-0 sticky top-0 h-screen bg-black/30 border-r border-white/5 flex-col p-6">
           <div className="flex items-center gap-3 mb-12">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-theme-soft text-[10px] font-black text-theme-dark shadow-lg">
-              YCSDI
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-white p-1 shadow-lg">
+              <img src="/logo.png" alt="YCSDI logo" className="h-full w-full object-contain" />
             </span>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-theme-soft">Admin Console</p>

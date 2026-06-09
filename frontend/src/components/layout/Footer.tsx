@@ -30,8 +30,8 @@ export function Footer() {
           {/* Brand & Mission */}
           <section>
             <RouterLink to="/" className="mb-8 inline-flex items-center gap-4 group">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-theme-soft text-sm font-black text-theme-dark transition-transform duration-500 group-hover:scale-110 shadow-lg shadow-theme-soft/20">
-                YCSDI
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white p-1.5 transition-transform duration-500 group-hover:scale-110 shadow-lg shadow-black/20">
+                <img src="/logo.png" alt="YCSDI logo" className="h-full w-full object-contain" />
               </span>
               <span className="text-xl font-black uppercase leading-[1.1] tracking-tight">
                 Youth Career <br />
