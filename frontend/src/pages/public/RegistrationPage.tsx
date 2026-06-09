@@ -8,6 +8,7 @@ import { useEffect, useState, ChangeEvent, FormEvent } from "react";
 import { publicCourseApi, publicInstituteApi, studentApi, type Course, type PublicInstitute } from "../../services/api";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { PhotoCropModal } from "../../components/ui/PhotoCropModal";
+import { getDistricts, getUpazilas } from "../../lib/bdAddress";
 
 export function RegistrationPage() {
   const [loading, setLoading] = useState(false);
@@ -20,6 +21,11 @@ export function RegistrationPage() {
   const [instituteId, setInstituteId] = useState("");
   const [courseDuration, setCourseDuration] = useState("");
   const [session, setSession] = useState("");
+  const [district, setDistrict] = useState("");
+  const [upazilla, setUpazilla] = useState("");
+
+  const districtOptions = getDistricts().map((d) => ({ value: d, label: d }));
+  const upazillaOptions = getUpazilas(district).map((u) => ({ value: u, label: u }));
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ serialNo: string; registrationId: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -34,6 +40,12 @@ export function RegistrationPage() {
     // Prefill duration from the selected course; the student can still edit it.
     const selected = courses.find((c) => c._id === value);
     setCourseDuration(selected?.duration ?? "");
+  };
+
+  const handleDistrictChange = (value: string) => {
+    setDistrict(value);
+    // Upazila list depends on district — clear the stale selection.
+    setUpazilla("");
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +96,14 @@ export function RegistrationPage() {
       setMessage({ type: 'error', text: 'Please select an institute' });
       return;
     }
+    if (!district) {
+      setMessage({ type: 'error', text: 'Please select a district' });
+      return;
+    }
+    if (!upazilla) {
+      setMessage({ type: 'error', text: 'Please select an upazilla / thana' });
+      return;
+    }
 
     setLoading(true);
 
@@ -106,6 +126,8 @@ export function RegistrationPage() {
       setInstituteId("");
       setCourseDuration("");
       setSession("");
+      setDistrict("");
+      setUpazilla("");
       setSuccess({ serialNo: response.data.serialNo, registrationId: response.data.registrationId });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error: any) {
@@ -392,41 +414,41 @@ export function RegistrationPage() {
                 
                 <div className="grid sm:grid-cols-3 gap-6">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Post Office *</label>
-                    <div className="relative group/input">
-                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <input 
-                        type="text" 
-                        name="postOffice"
-                        placeholder="Post Office"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
-                        required
-                      />
-                    </div>
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">District / Zilla *</label>
+                    <SearchableSelect
+                      name="district"
+                      value={district}
+                      onChange={handleDistrictChange}
+                      options={districtOptions}
+                      placeholder="Select district"
+                      searchPlaceholder="Search district…"
+                      emptyText="No districts found"
+                      icon={MapPin}
+                    />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Upazilla / Thana *</label>
-                    <div className="relative group/input">
-                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <input 
-                        type="text" 
-                        name="upazilla"
-                        placeholder="Upazilla/Thana"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
-                        required
-                      />
-                    </div>
+                    <SearchableSelect
+                      name="upazilla"
+                      value={upazilla}
+                      onChange={setUpazilla}
+                      options={upazillaOptions}
+                      placeholder={district ? "Select upazilla" : "Select a district first"}
+                      searchPlaceholder="Search upazilla…"
+                      emptyText={district ? "No upazillas found" : "Select a district first"}
+                      icon={MapPin}
+                    />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">District *</label>
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Post Office *</label>
                     <div className="relative group/input">
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <input 
-                        type="text" 
-                        name="district"
-                        placeholder="District"
+                      <input
+                        type="text"
+                        name="postOffice"
+                        placeholder="Post Office"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
                         required
                       />
