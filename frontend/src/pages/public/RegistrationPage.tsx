@@ -495,24 +495,50 @@ export function RegistrationPage() {
                 <div className="space-y-1">
                   <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Passport Size Photo *</label>
                   <div className="relative group/file">
-                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-white/10 rounded-2xl cursor-pointer bg-white/5 hover:bg-white/10 hover:border-theme-soft/50 transition-all overflow-hidden">
-                      {photoPreview ? (
-                        <img src={photoPreview} alt="Preview" className="max-h-full max-w-full object-contain" />
-                      ) : (
+                    {photoPreview ? (
+                      <label className="flex items-center gap-5 w-full p-4 border border-white/10 rounded-2xl cursor-pointer bg-white/5 hover:bg-white/10 hover:border-theme-soft/50 transition-all">
+                        <img
+                          src={photoPreview}
+                          alt="Passport photo preview"
+                          className="h-40 w-32 shrink-0 rounded-xl object-cover border border-white/10 bg-white/5"
+                        />
+                        <div className="min-w-0">
+                          <p className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-green-400">
+                            <CheckCircle2 size={14} /> Photo ready
+                          </p>
+                          <p className="mt-1 text-[10px] font-bold text-white/40 leading-relaxed">
+                            Looks good. Make sure your face is clearly visible.
+                          </p>
+                          <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white/70 group-hover/file:text-theme-soft group-hover/file:border-theme-soft/50 transition-all">
+                            <Upload size={12} /> Change photo
+                          </span>
+                        </div>
+                        <input
+                          type="file"
+                          name="photo"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          required={false}
+                        />
+                      </label>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-white/10 rounded-2xl cursor-pointer bg-white/5 hover:bg-white/10 hover:border-theme-soft/50 transition-all overflow-hidden">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="text-white/20 mb-2 group-hover/file:text-theme-soft transition-colors" size={24} />
                           <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">Click to upload photo</p>
+                          <p className="mt-1 text-[9px] text-white/20 font-bold uppercase tracking-widest">Passport size · JPG or PNG</p>
                         </div>
-                      )}
-                      <input 
-                        type="file" 
-                        name="photo"
-                        className="hidden" 
-                        accept="image/*" 
-                        onChange={handleFileChange}
-                        required={false}
-                      />
-                    </label>
+                        <input
+                          type="file"
+                          name="photo"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          required={false}
+                        />
+                      </label>
+                    )}
                   </div>
                 </div>
               </div>
