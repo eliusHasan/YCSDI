@@ -5,6 +5,7 @@ import {
   drawLogo,
   drawSignature,
   formatDate,
+  loadAsset,
   qrBuffer,
   uploadPdf,
 } from "./shared.js";
@@ -30,9 +31,24 @@ export interface CertificateInput {
 const GRADING_MARKS = ["4.00 = 80% & Above", "3.75 = 75% & Above", "3.50 = 70% & Above", "3.25 = 65% & Above"];
 const NOTE_RED = "#B23B3B";
 
-/** Ornate gold certificate frame: thick outer band + chevron zig-zag + inner lines. */
+/**
+ * Certificate frame. Uses the ornamental `certificate-border.png` full-page
+ * artwork when present (drop-in via the assets folder); otherwise falls back to
+ * the drawn gold chevron frame so generation never breaks if the asset is gone.
+ */
 function drawBorder(doc: PDFKit.PDFDocument, W: number, H: number) {
   doc.rect(0, 0, W, H).fill(COLORS.white);
+
+  const border = loadAsset("certificate-border.png");
+  if (border) {
+    try {
+      doc.image(border, 0, 0, { width: W, height: H });
+      return;
+    } catch {
+      /* fall through to drawn frame */
+    }
+  }
+
   doc.lineWidth(8).strokeColor(COLORS.gold).rect(16, 16, W - 32, H - 32).stroke();
 
   // Chevron zig-zag band running just inside the outer line on all four edges.
@@ -148,11 +164,11 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       drawSignature(doc, W / 2 - 75, footerY + 26, 150, "Exam Controller");
       drawSignature(doc, W - 235, footerY + 26, 165, "Chairman", undefined, "signature-2.png");
 
-      // Bottom note + tiny identifiers
+      // Bottom note + tiny identifiers — kept inside the ornamental border.
       doc.fillColor(NOTE_RED).font("Helvetica-Oblique").fontSize(8.5)
-        .text("Note: This certificate is issued without any alteration or erasure.", 0, H - 42, { align: "center", width: W });
+        .text("Note: This certificate is issued without any alteration or erasure.", 0, H - 52, { align: "center", width: W });
       doc.fillColor(COLORS.muted).font("Helvetica").fontSize(7)
-        .text(`Certificate No: ${input.certificateNumber}`, 70, H - 30, { lineBreak: false });
+        .text(`Certificate No: ${input.certificateNumber}`, 70, H - 50, { lineBreak: false });
 
       doc.end();
     } catch (err) {
