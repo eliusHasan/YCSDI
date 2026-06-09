@@ -2,21 +2,30 @@ import {
   Ban,
   Building2,
   BookOpen,
+  CalendarDays,
   CheckCircle2,
   Clock,
+  Eye,
   GraduationCap,
+  Hash,
+  IdCard,
   Loader2,
   Lock,
+  Mail,
+  MapPin,
+  MessageSquare,
   Pencil,
+  Phone,
   Search,
   ShieldCheck,
   Trash2,
   Undo2,
   User as UserIcon,
+  Users,
   X,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
 import {
   adminApi,
   instituteApi,
@@ -99,6 +108,8 @@ export function AdminDashboard() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  const [viewStudent, setViewStudent] = useState<Student | null>(null);
+
   useEffect(() => {
     if (!editStudent) return;
     const onKey = (e: KeyboardEvent) => {
@@ -107,6 +118,15 @@ export function AdminDashboard() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [editStudent]);
+
+  useEffect(() => {
+    if (!viewStudent) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setViewStudent(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewStudent]);
 
   useEffect(() => {
     void loadAll();
@@ -393,7 +413,14 @@ export function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setViewStudent(student)}
+                              className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors"
+                              title="View details"
+                            >
+                              <Eye size={16} />
+                            </button>
                             {student.status === "pending" && (
                               <>
                                 <button
@@ -702,6 +729,162 @@ export function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {viewStudent && (
+        <div onClick={() => setViewStudent(null)} className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-2xl bg-theme-dark border border-white/10 rounded-[32px] p-8 pt-16 shadow-2xl my-8">
+              <button
+                onClick={() => setViewStudent(null)}
+                aria-label="Close"
+                className="absolute top-5 right-5 z-20 grid h-10 w-10 place-items-center rounded-xl bg-white/10 border border-white/10 text-white/70 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-8">
+                <div className="h-16 w-16 rounded-2xl overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                  <img src={viewStudent.photoUrl} alt="" className="h-full w-full object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xl font-black uppercase tracking-tight truncate">{viewStudent.fullName}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        viewStudent.status === "approved"
+                          ? "bg-green-500/10 border-green-500/20 text-green-400"
+                          : viewStudent.status === "rejected"
+                          ? "bg-red-500/10 border-red-500/20 text-red-400"
+                          : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                      }`}
+                    >
+                      {viewStudent.status === "approved" ? (
+                        <CheckCircle2 size={10} />
+                      ) : viewStudent.status === "rejected" ? (
+                        <XCircle size={10} />
+                      ) : (
+                        <Clock size={10} />
+                      )}
+                      {viewStudent.status}
+                    </span>
+                    {viewStudent.banned && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-red-500/20 border-red-500/40 text-red-300">
+                        <Ban size={10} /> Banned
+                      </span>
+                    )}
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{viewStudent.registrationId}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <DetailSection title="Personal">
+                  <DetailRow icon={Users} label="Father's Name" value={viewStudent.fatherName} />
+                  <DetailRow icon={Users} label="Mother's Name" value={viewStudent.motherName} />
+                  <DetailRow icon={UserIcon} label="Gender" value={viewStudent.gender} />
+                  <DetailRow icon={CalendarDays} label="Date of Birth" value={viewStudent.dateOfBirth ? new Date(viewStudent.dateOfBirth).toLocaleDateString() : "—"} />
+                  <DetailRow icon={IdCard} label="NID / Passport" value={viewStudent.nidPassport || "—"} />
+                </DetailSection>
+
+                <DetailSection title="Address">
+                  <DetailRow icon={MapPin} label="District / Zilla" value={viewStudent.district} />
+                  <DetailRow icon={MapPin} label="Upazilla / Thana" value={viewStudent.upazilla} />
+                  <DetailRow icon={MapPin} label="Post Office" value={viewStudent.postOffice} />
+                </DetailSection>
+
+                <DetailSection title="Program">
+                  <DetailRow icon={BookOpen} label="Preferred Course" value={viewStudent.preferredCourseId?.title || "—"} />
+                  <DetailRow icon={Building2} label="Preferred Institute" value={viewStudent.preferredInstituteId ? `${viewStudent.preferredInstituteId.code} — ${viewStudent.preferredInstituteId.name}` : "—"} />
+                  <DetailRow icon={Clock} label="Course Duration" value={viewStudent.courseDuration || "—"} />
+                  <DetailRow icon={CalendarDays} label="Session" value={viewStudent.session || "—"} />
+                </DetailSection>
+
+                <DetailSection title="Contact">
+                  <DetailRow icon={Phone} label="Mobile Number" value={viewStudent.mobileNumber} />
+                  <DetailRow icon={Mail} label="Email" value={viewStudent.email || "—"} />
+                  {viewStudent.message && <DetailRow icon={MessageSquare} label="Message" value={viewStudent.message} />}
+                </DetailSection>
+
+                <DetailSection title="Record">
+                  <DetailRow icon={Hash} label="Serial No" value={viewStudent.serialNo || "—"} />
+                  <DetailRow icon={Building2} label="Assigned Institute" value={viewStudent.instituteId ? `${viewStudent.instituteId.code} — ${viewStudent.instituteId.name}` : "— Unassigned"} />
+                  <DetailRow icon={UserIcon} label="Login User ID" value={viewStudent.userId?.userId || "—"} />
+                  <DetailRow icon={CalendarDays} label="Registered" value={new Date(viewStudent.createdAt).toLocaleString()} />
+                </DetailSection>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-3 mt-8 pt-6 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setViewStudent(null)}
+                  className="py-3 px-6 rounded-xl border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { openEdit(viewStudent); setViewStudent(null); }}
+                  className="flex items-center gap-2 py-3 px-6 rounded-xl bg-white/5 text-white/70 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                  <Pencil size={14} /> Edit
+                </button>
+                {viewStudent.status === "pending" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { const s = viewStudent; setViewStudent(null); void handleReject(s._id); }}
+                      className="flex items-center gap-2 py-3 px-6 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                    >
+                      <XCircle size={14} /> Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { const s = viewStudent; setViewStudent(null); handleApproveClick(s); }}
+                      className="flex items-center gap-2 py-3 px-6 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
+                    >
+                      <ShieldCheck size={14} /> Approve
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DetailSectionProps {
+  title: string;
+  children: ReactNode;
+}
+
+function DetailSection({ title, children }: DetailSectionProps) {
+  return (
+    <div>
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft mb-2">{title}</p>
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface DetailRowProps {
+  icon: ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: string;
+}
+
+function DetailRow({ icon: Icon, label, value }: DetailRowProps) {
+  return (
+    <div className="flex items-start gap-2.5 min-w-0">
+      <Icon size={14} className="text-white/30 mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">{label}</p>
+        <p className="text-sm font-bold text-white/90 break-words">{value}</p>
+      </div>
     </div>
   );
 }
