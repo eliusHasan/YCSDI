@@ -5,8 +5,10 @@ import {
   Building2,
   Calendar,
   CheckCircle2,
+  Clock,
   Download,
   FileText,
+  GraduationCap,
   Hash,
   Home,
   Loader2,
@@ -522,9 +524,21 @@ function StudentReadView({ student, enrollments, certificates, onEdit }: Student
           <MapPin size={12} /> Address
         </h4>
         <div className="grid sm:grid-cols-3 gap-3">
+          <ReadField label="District / Zilla" value={student.district} />
+          <ReadField label="Upazilla / Thana" value={student.upazilla} />
           <ReadField label="Post Office" value={student.postOffice} />
-          <ReadField label="Upazilla" value={student.upazilla} />
-          <ReadField label="District" value={student.district} />
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-theme-soft mb-3 flex items-center gap-2">
+          <GraduationCap size={12} /> Program
+        </h4>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <ReadField label="Preferred Course" value={student.preferredCourseId?.title ?? "—"} icon={BookOpen} />
+          <ReadField label="Preferred Institute" value={student.preferredInstituteId ? `${student.preferredInstituteId.code} — ${student.preferredInstituteId.name}` : "—"} icon={Building2} />
+          <ReadField label="Course Duration" value={student.courseDuration ?? "—"} icon={Clock} />
+          <ReadField label="Session" value={student.session ?? "—"} icon={Calendar} />
         </div>
       </div>
 

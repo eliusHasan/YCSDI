@@ -54,7 +54,10 @@ export class StaffStudentController {
       registrationId: req.params.serial,
       banned: false,
       instituteId: { $in: staff.instituteIds },
-    }).populate("instituteId", "name code");
+    })
+      .populate("instituteId", "name code")
+      .populate("preferredInstituteId", "name code")
+      .populate("preferredCourseId", "title slug");
 
     if (!student) {
       res.status(404).json({ message: "Student not found" });
