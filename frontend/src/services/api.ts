@@ -138,6 +138,8 @@ export interface Student {
   mobileNumber: string;
   email?: string;
   message?: string;
+  courseDuration?: string;
+  session?: string;
   photoUrl: string;
   status: StudentStatus;
   serialNo?: string;

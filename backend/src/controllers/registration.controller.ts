@@ -18,6 +18,8 @@ const ACCEPTED_FIELDS = [
   "mobileNumber",
   "email",
   "message",
+  "courseDuration",
+  "session",
 ] as const;
 
 function pickAccepted(body: Record<string, unknown>): Record<string, unknown> {

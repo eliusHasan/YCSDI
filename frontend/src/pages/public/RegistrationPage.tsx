@@ -1,7 +1,7 @@
 import {
   User, Mail, Phone, UserPlus, ArrowLeft, ArrowRight, Calendar,
   MapPin, IdCard, MessageSquare, Upload, Users, Loader2, BookOpen, Building2, GraduationCap,
-  CheckCircle2, Copy, Check, Hash, ShieldCheck
+  CheckCircle2, Copy, Check, Hash, ShieldCheck, Clock, CalendarDays
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState, ChangeEvent, FormEvent } from "react";
@@ -18,6 +18,8 @@ export function RegistrationPage() {
   const [institutes, setInstitutes] = useState<PublicInstitute[]>([]);
   const [courseId, setCourseId] = useState("");
   const [instituteId, setInstituteId] = useState("");
+  const [courseDuration, setCourseDuration] = useState("");
+  const [session, setSession] = useState("");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ serialNo: string; registrationId: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -26,6 +28,13 @@ export function RegistrationPage() {
     publicCourseApi.list().then((r) => setCourses(r.data)).catch(() => {});
     publicInstituteApi.list().then((r) => setInstitutes(r.data)).catch(() => {});
   }, []);
+
+  const handleCourseChange = (value: string) => {
+    setCourseId(value);
+    // Prefill duration from the selected course; the student can still edit it.
+    const selected = courses.find((c) => c._id === value);
+    setCourseDuration(selected?.duration ?? "");
+  };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,6 +104,8 @@ export function RegistrationPage() {
       setPhotoPreview(null);
       setCourseId("");
       setInstituteId("");
+      setCourseDuration("");
+      setSession("");
       setSuccess({ serialNo: response.data.serialNo, registrationId: response.data.registrationId });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error: any) {
@@ -290,7 +301,7 @@ export function RegistrationPage() {
                     <SearchableSelect
                       name="preferredCourseId"
                       value={courseId}
-                      onChange={setCourseId}
+                      onChange={handleCourseChange}
                       options={courses.map((c) => ({ value: c._id, label: c.title }))}
                       placeholder="Select a course"
                       searchPlaceholder="Search course by name…"
@@ -317,6 +328,36 @@ export function RegistrationPage() {
                     {institutes.length === 0 && (
                       <p className="text-[9px] font-bold text-white/30 ml-1 mt-1">No institutes available right now.</p>
                     )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Course Duration</label>
+                    <div className="relative group/input">
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
+                      <input
+                        type="text"
+                        name="courseDuration"
+                        value={courseDuration}
+                        onChange={(e) => setCourseDuration(e.target.value)}
+                        placeholder="e.g. 6 Months"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Session</label>
+                    <div className="relative group/input">
+                      <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
+                      <input
+                        type="text"
+                        name="session"
+                        value={session}
+                        onChange={(e) => setSession(e.target.value)}
+                        placeholder="e.g. 2025-2026"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

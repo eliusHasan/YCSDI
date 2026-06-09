@@ -15,6 +15,8 @@ export interface IStudent extends Document {
   mobileNumber: string;
   email?: string;
   message?: string;
+  courseDuration?: string;
+  session?: string;
   photoUrl: string;
   status: StudentStatus;
   serialNo: string;
@@ -42,6 +44,8 @@ const studentSchema = new Schema<IStudent>(
     mobileNumber: { type: String, required: true, trim: true },
     email: { type: String, trim: true, lowercase: true },
     message: { type: String, trim: true },
+    courseDuration: { type: String, trim: true },
+    session: { type: String, trim: true },
     photoUrl: { type: String, required: true },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", index: true },
     serialNo: { type: String, unique: true, sparse: true, index: true },
