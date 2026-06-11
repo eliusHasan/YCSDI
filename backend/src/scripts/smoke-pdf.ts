@@ -61,6 +61,8 @@ async function main() {
     letterGrade: "A",
     examDate: new Date("2016-12-27"),
     issuedDate: new Date("2017-02-27"),
+    centerCode: "5001",
+    courseDuration: "Six Months",
   });
   writeFileSync(resolve(out, "smoke-certificate.pdf"), cert);
 

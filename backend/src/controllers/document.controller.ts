@@ -463,6 +463,8 @@ export class DocumentController {
       letterGrade: r.letterGrade,
       examDate: ctx.exam,
       issuedDate: ctx.issuedDate,
+      centerCode: enrollment.instituteId.code,
+      courseDuration: enrollment.courseId.duration,
     });
     return { pdfUrl, certificate: { cgpa: r.cgpa, letterGrade: r.letterGrade } };
   }
