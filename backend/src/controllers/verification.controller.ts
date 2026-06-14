@@ -18,14 +18,42 @@ const VERIFY_SOURCES: Array<{ type: string; label: string; model: Model<unknown>
   { type: "certificate", label: "Certificate", model: Certificate as unknown as Model<unknown> },
 ];
 
+type VerifiedDoc = {
+  type: string;
+  label: string;
+  serialNo: string;
+  pdfUrl: string;
+  issuedAt: Date;
+  course: unknown;
+  institute: unknown;
+};
+
 export class VerificationController {
-  /** Public: resolve a serial number to its issued document for authenticity checks. */
+  /**
+   * Public: resolve a serial number for authenticity checks. A serial now
+   * identifies a *student* — every document they have been issued shares it —
+   * so we return the student plus all of their issued documents. Older
+   * per-document serials are still resolved via a fallback.
+   */
   static async verify(req: Request, res: Response) {
     const { serial } = req.params;
     if (!serial || !/^\d{6,12}$/.test(serial)) {
       res.status(400).json({ message: "Invalid serial number" });
       return;
     }
+
+    // Primary path: the serial belongs to a student.
+    const student = await Student.findOne({ serialNo: serial }).select(
+      "fullName fatherName motherName registrationId photoUrl",
+    );
+    if (student) {
+      const documents = await VerificationController.collectDocuments({ studentId: student._id });
+      res.status(200).json({ found: true, student, documents });
+      return;
+    }
+
+    // Legacy fallback: documents issued before serials were shared carry their
+    // own unique serial. Resolve that single document and shape it uniformly.
     for (const source of VERIFY_SOURCES) {
       const doc = await source.model
         .findOne({ serialNo: serial })
@@ -33,11 +61,60 @@ export class VerificationController {
         .populate(COURSE)
         .populate(INSTITUTE);
       if (doc) {
-        res.status(200).json({ found: true, type: source.type, label: source.label, document: doc });
+        const d = doc as unknown as {
+          studentId: unknown;
+          serialNo: string;
+          pdfUrl: string;
+          issuedAt: Date;
+          courseId: unknown;
+          instituteId: unknown;
+        };
+        res.status(200).json({
+          found: true,
+          student: d.studentId,
+          documents: [
+            {
+              type: source.type,
+              label: source.label,
+              serialNo: d.serialNo,
+              pdfUrl: d.pdfUrl,
+              issuedAt: d.issuedAt,
+              course: d.courseId,
+              institute: d.instituteId,
+            },
+          ],
+        });
         return;
       }
     }
     res.status(404).json({ found: false, message: "No document found for this serial number" });
+  }
+
+  /** Gather every issued document matching a filter, with course/institute populated. */
+  private static async collectDocuments(filter: Record<string, unknown>): Promise<VerifiedDoc[]> {
+    const items: VerifiedDoc[] = [];
+    for (const source of VERIFY_SOURCES) {
+      const docs = await source.model.find(filter).populate(COURSE).populate(INSTITUTE).sort({ issuedAt: -1 });
+      for (const raw of docs) {
+        const d = raw as unknown as {
+          serialNo: string;
+          pdfUrl: string;
+          issuedAt: Date;
+          courseId: unknown;
+          instituteId: unknown;
+        };
+        items.push({
+          type: source.type,
+          label: source.label,
+          serialNo: d.serialNo,
+          pdfUrl: d.pdfUrl,
+          issuedAt: d.issuedAt,
+          course: d.courseId,
+          institute: d.instituteId,
+        });
+      }
+    }
+    return items;
   }
 
   /**

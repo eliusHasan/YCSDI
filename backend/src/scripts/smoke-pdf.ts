@@ -26,6 +26,7 @@ async function main() {
     upazilla: "Akkelpur",
     district: "Joypurhat",
     courseCode: "DIC",
+    courseDuration: "Six Months",
   });
   writeFileSync(resolve(out, "smoke-registration.pdf"), reg);
 

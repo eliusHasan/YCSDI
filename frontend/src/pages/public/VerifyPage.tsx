@@ -27,7 +27,8 @@ export function VerifyPage() {
       const { data } = await publicVerifyApi.verify(value.trim());
       setResult(data);
     } catch (e: any) {
-      if (e.response?.status === 404) setResult({ found: false, message: "No document found for this serial number" });
+      if (e.response?.status === 404)
+        setResult({ found: false, message: "No documents found for this serial number" });
       else setError(e.response?.data?.message ?? "Verification failed");
     } finally {
       setLoading(false);
@@ -45,7 +46,8 @@ export function VerifyPage() {
     if (serial.trim() === serialParam) void lookup(serial);
   };
 
-  const doc = result?.document;
+  const student = result?.student;
+  const documents = result?.documents ?? [];
 
   return (
     <main className="bg-[#F9FBFC] min-h-screen">
@@ -87,34 +89,59 @@ export function VerifyPage() {
           )}
 
           {result && !loading && (
-            result.found && doc ? (
+            result.found && student ? (
               <div className="bg-white rounded-[32px] shadow-[0_40px_100px_rgba(27,60,83,0.12)] border border-slate-100 overflow-hidden">
                 <div className="bg-emerald-500 px-8 py-5 flex items-center gap-3 text-white">
                   <BadgeCheck size={24} />
                   <div>
-                    <p className="font-black uppercase tracking-tight">Authentic {result.label}</p>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-white/80">Serial {doc.serialNo}</p>
+                    <p className="font-black uppercase tracking-tight">Authentic — {refName(student, "fullName")}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-white/80">Serial {serial.trim() || serialParam}</p>
                   </div>
                 </div>
-                <div className="p-8 grid sm:grid-cols-2 gap-x-10 gap-y-5">
-                  <Field label="Student" value={refName(doc.studentId, "fullName")} />
-                  <Field label="Registration ID" value={refName(doc.studentId, "registrationId")} />
-                  <Field label="Course" value={refName(doc.courseId, "title")} />
-                  <Field label="Institute" value={refName(doc.instituteId, "name")} />
-                  <Field label="Issued On" value={new Date(doc.issuedAt).toLocaleDateString()} />
-                  <Field label="Document Type" value={result.label ?? ""} />
+                <div className="p-8 grid sm:grid-cols-2 gap-x-10 gap-y-5 border-b border-slate-100">
+                  <Field label="Student" value={refName(student, "fullName")} />
+                  <Field label="Registration ID" value={refName(student, "registrationId")} />
+                  <Field label="Father's Name" value={refName(student, "fatherName")} />
+                  <Field label="Mother's Name" value={refName(student, "motherName")} />
                 </div>
-                <div className="px-8 pb-8">
-                  <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-theme-dark text-theme-soft font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-theme-accent hover:text-white transition-all">
-                    <ExternalLink size={16} /> View Document PDF
-                  </a>
+                <div className="p-8">
+                  <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-4">
+                    Issued Documents ({documents.length})
+                  </p>
+                  {documents.length === 0 ? (
+                    <p className="text-slate-400 text-sm font-medium">No documents have been issued for this student yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {documents.map((d) => (
+                        <div
+                          key={`${d.type}-${d.serialNo}`}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 px-5 py-4"
+                        >
+                          <div>
+                            <p className="text-sm font-black text-theme-dark">{d.label}</p>
+                            <p className="text-[11px] font-bold text-slate-400">
+                              {refName(d.course, "title")} · Issued {new Date(d.issuedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <a
+                            href={d.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-theme-dark text-theme-soft font-black px-5 py-2.5 rounded-xl text-[11px] uppercase tracking-widest hover:bg-theme-accent hover:text-white transition-all"
+                          >
+                            <ExternalLink size={14} /> View PDF
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="bg-white rounded-[32px] p-12 shadow-xl border border-slate-100 text-center">
                 <ShieldX className="text-red-400 mx-auto mb-4" size={40} />
                 <p className="text-theme-dark font-black uppercase tracking-widest">Not Found</p>
-                <p className="text-slate-400 text-sm font-medium mt-2">{result.message ?? "No document matches this serial number."}</p>
+                <p className="text-slate-400 text-sm font-medium mt-2">{result.message ?? "No documents match this serial number."}</p>
               </div>
             )
           )}

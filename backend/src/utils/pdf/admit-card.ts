@@ -1,16 +1,15 @@
 import PDFDocument from "pdfkit";
+import { fetchImageBuffer, formatDate, uploadPdf } from "./shared.js";
 import {
-  BRAND,
-  COLORS,
+  DOC_INK,
   drawBadge,
-  drawFrame,
-  drawLogo,
-  drawSignature,
-  drawWatermark,
-  fetchImageBuffer,
-  formatDate,
-  uploadPdf,
-} from "./shared.js";
+  drawDocFrame,
+  drawDocHeader,
+  drawDocLogo,
+  drawToken,
+  registerDocFonts,
+  type DocFonts,
+} from "./doc-common.js";
 
 export interface AdmitCardInput {
   serialNo: string;
@@ -27,95 +26,110 @@ export interface AdmitCardInput {
   photoUrl?: string;
 }
 
+const LABEL_X = 38.5;
+const COLON_X = 130;
+const VALUE_X = 143;
+const VALUE_MAX = 430;
+const ROW_SIZE = 10;
+
+function drawValue(doc: PDFKit.PDFDocument, font: string, str: string, x: number, y: number, maxW: number): void {
+  let size = ROW_SIZE;
+  doc.font(font).fontSize(size);
+  const w = doc.widthOfString(str);
+  if (w > maxW) size = Math.max(6, (size * maxW) / w);
+  drawToken(doc, font, { x, y, size, str: str || "—", color: DOC_INK });
+}
+
+function drawLeftRows(doc: PDFKit.PDFDocument, fonts: DocFonts, input: AdmitCardInput): void {
+  const rows: Array<[string, string]> = [
+    ["Name of the Institute", input.instituteName],
+    ["Name of the Student", input.studentName],
+    ["Father's Name", input.fatherName],
+    ["Mother's Name", input.motherName],
+    ["Date of Birth", formatDate(input.dateOfBirth)],
+    ["Session", input.session],
+    ["Subject Name", input.subjectName],
+  ];
+  const ys = [174, 194, 214, 234, 254, 274, 294];
+  rows.forEach(([label, value], i) => {
+    const y = ys[i];
+    drawToken(doc, fonts.calibriBold, { x: LABEL_X, y, size: ROW_SIZE, str: label, color: DOC_INK });
+    drawToken(doc, fonts.calibriBold, { x: COLON_X, y, size: ROW_SIZE, str: ":", color: DOC_INK });
+    drawValue(doc, fonts.calibriBold, value, VALUE_X, y, VALUE_MAX - VALUE_X);
+  });
+}
+
 export async function render(input: AdmitCardInput): Promise<Buffer> {
   const photo = await fetchImageBuffer(input.photoUrl);
 
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0 });
+      const doc = new PDFDocument({ size: "A4", layout: "portrait", margin: 0 });
       const chunks: Buffer[] = [];
       doc.on("data", (c: Buffer) => chunks.push(c));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      const W = doc.page.width;
-      const H = doc.page.height;
-      drawFrame(doc);
-      drawWatermark(doc, BRAND.shortName);
+      const fonts = registerDocFonts(doc);
+      drawDocFrame(doc, "admit-border.png");
 
-      // Header
-      doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(13)
-        .text(BRAND.govtLine, 0, 48, { align: "center" });
-      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(20)
-        .text(BRAND.name, 0, 70, { align: "center" });
+      // Header: govt line, title, small top-left logo.
+      drawDocHeader(
+        doc,
+        fonts,
+        { x: 105.72, y: 82.69, size: 32.951, hScale: 8.949 / 32.951, refWidth: 457.2 },
+        { x: 107.46, y: 51.47, size: 13.5, hScale: 19.825 / 13.5, refWidth: 451.72 },
+      );
+      drawDocLogo(doc, 36, 56, 62);
 
-      drawLogo(doc, 55, 110, 72);
-      drawBadge(doc, W / 2 - 60, 122, "Admit Card");
+      drawBadge(doc, fonts.calibriBold, {
+        text: "Admit Card",
+        size: 23.071,
+        hScale: 26.064 / 23.071,
+        rect: { x: 226, y: 108, w: 143, h: 29 },
+        radius: 4,
+        baselineY: 124,
+      });
 
-      // Photo (top right)
-      const photoX = W - 165;
-      const photoY = 108;
-      const photoW = 110;
-      const photoH = 128;
-      doc.lineWidth(1).strokeColor(COLORS.line).rect(photoX, photoY, photoW, photoH).stroke();
+      drawLeftRows(doc, fonts, input);
+
+      // Right column: photo box, Roll/Reg boxes, Sex.
+      doc.lineWidth(1).strokeColor(DOC_INK);
+      doc.rect(481.5, 150, 69.5, 52).stroke();
       if (photo) {
         try {
-          doc.image(photo, photoX + 1, photoY + 1, { fit: [photoW - 2, photoH - 2], align: "center", valign: "center" });
+          doc.image(photo, 482.5, 151, { fit: [67.5, 50], align: "center", valign: "center" });
         } catch {
           /* ignore */
         }
       }
 
-      // Serial No
-      doc.fillColor(COLORS.muted).font("Helvetica").fontSize(11).text("Serial No.", 55, 200);
-      doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12).text(input.serialNo, 115, 200);
+      const rightLabel = (label: string, y: number) =>
+        drawToken(doc, fonts.calibriBold, { x: 439.08, y, size: ROW_SIZE, str: label, color: DOC_INK });
+      rightLabel("Roll No", 223.33);
+      drawToken(doc, fonts.calibriBold, { x: 475.08, y: 223.33, size: ROW_SIZE, str: ":", color: DOC_INK });
+      rightLabel("Reg. No :", 243.33);
+      rightLabel("Sex", 263.33);
+      drawToken(doc, fonts.calibriBold, { x: 475.08, y: 263.33, size: ROW_SIZE, str: ":", color: DOC_INK });
 
-      // Left column fields
-      const labelX = 55;
-      const valueX = 215;
-      let y = 235;
-      const rowGap = 28;
-      const row = (label: string, value: string, bold = false) => {
-        doc.fillColor(COLORS.muted).font("Helvetica").fontSize(11.5).text(label, labelX, y, { width: valueX - labelX - 6 });
-        doc.fillColor(COLORS.ink).font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(11.5)
-          .text(`: ${value || "—"}`, valueX, y, { width: 320 });
-        y += rowGap;
-      };
+      // Roll/Reg value boxes.
+      doc.lineWidth(1).strokeColor(DOC_INK);
+      doc.rect(481.5, 213, 69.5, 15.5).stroke();
+      doc.rect(481.5, 233, 69.5, 15.5).stroke();
+      drawValue(doc, fonts.calibriBold, input.rollNo, 486, 224.5, 60);
+      drawValue(doc, fonts.calibriBold, input.registrationNo, 486, 244.5, 60);
+      drawValue(doc, fonts.calibriBold, input.sex, 481, 263.33, 90);
 
-      row("Name of the Institute", input.instituteName, true);
-      row("Name of the Student", input.studentName, true);
-      row("Father's Name", input.fatherName);
-      row("Mother's Name", input.motherName);
-      row("Date of Birth", formatDate(input.dateOfBirth));
-      row("Session", input.session);
-      row("Subject Name", input.subjectName, true);
+      // Directions (Arial Narrow).
+      const dir = (str: string, y: number) =>
+        drawToken(doc, fonts.narrow, { x: 42.49, y, size: 6, hScale: 7.386 / 6, str, color: DOC_INK });
+      dir("Directions:", 363.4);
+      dir("1. The examinee must bring the Registration Card along with the Admit Card to the examination hall.", 371.4);
+      dir("2. The examinee must sign the attendance sheet; otherwise, the examinee will be considered absent.", 379.4);
 
-      // Right column: Roll / Reg boxes + Sex
-      const rx = W - 320;
-      let ry = 250;
-      const boxW = 160;
-      const labelW = 70;
-      const fieldRow = (label: string, value: string) => {
-        doc.fillColor(COLORS.ink).font("Helvetica").fontSize(12).text(label, rx, ry + 6);
-        doc.lineWidth(1).strokeColor(COLORS.navy).rect(rx + labelW, ry, boxW, 28).stroke();
-        doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(13)
-          .text(value || "—", rx + labelW, ry + 7, { width: boxW, align: "center" });
-        ry += 48;
-      };
-      fieldRow("Roll No:", input.rollNo);
-      fieldRow("Reg. No:", input.registrationNo);
-      doc.fillColor(COLORS.ink).font("Helvetica").fontSize(12).text("Sex", rx, ry + 2);
-      doc.fillColor(COLORS.ink).font("Helvetica").fontSize(12).text(`:  ${input.sex || "—"}`, rx + labelW, ry + 2);
-
-      // Directions
-      const dirY = H - 100;
-      doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10).text("Directions:", 55, dirY);
-      doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8.5)
-        .text("1. The Examinee must bring the Registration Card along with the Admit Card in the examination hall.", 55, dirY + 14, { width: 460 })
-        .text("2. The Examinee must sign the attendance sheet otherwise examinee will be treated as absent.", 55, dirY + 26, { width: 460 });
-
-      // Signature
-      drawSignature(doc, W - 240, H - 70, 185, "Controller of Examinations", BRAND.shortName);
+      // Controller signature (right).
+      doc.lineWidth(1).strokeColor(DOC_INK).moveTo(445, 370).lineTo(574, 370).stroke();
+      drawToken(doc, fonts.narrow, { x: 457.49, y: 380.71, size: 7.125, hScale: 8.77 / 7.125, str: "Controller of Examinations", color: DOC_INK });
 
       doc.end();
     } catch (err) {

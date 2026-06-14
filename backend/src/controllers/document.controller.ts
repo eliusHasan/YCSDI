@@ -51,12 +51,14 @@ interface PopulatedEnrollment {
     upazilla: string;
     district: string;
     photoUrl?: string;
+    serialNo?: string;
   };
   courseId: { _id: unknown; title: string; category?: string; duration?: string; subjects?: string[] };
   instituteId: { _id: unknown; name: string; code: string };
 }
 
-const STUDENT_FIELDS = "fullName fatherName motherName gender dateOfBirth postOffice upazilla district photoUrl";
+const STUDENT_FIELDS =
+  "fullName fatherName motherName gender dateOfBirth postOffice upazilla district photoUrl serialNo";
 
 function populateEnrollment(query: ReturnType<typeof Enrollment.findById>) {
   return query
@@ -242,7 +244,14 @@ export class DocumentController {
     }
 
     const s = enrollment.studentId;
-    const serialNo = await generateSerialNo();
+    // Every document issued for a student shares the student's registration
+    // serial number, so a single serial / QR verifies all of their documents.
+    // Older students without a serial get one assigned now (and persisted).
+    let serialNo = s.serialNo;
+    if (!serialNo) {
+      serialNo = await generateSerialNo();
+      await Student.updateOne({ _id: s._id }, { serialNo });
+    }
     const issuedAt = new Date();
     const exam = examDate ? new Date(examDate) : issuedAt;
     const certificateNumber = type === "certificate" ? await generateCertificateNumber() : undefined;
@@ -386,6 +395,7 @@ export class DocumentController {
         district: s.district,
         courseTitle: enrollment.courseId.title,
         courseCode: enrollment.courseId.category ?? "",
+        courseDuration: enrollment.courseId.duration ?? "",
         registrationNo,
         rollNo,
         session: enrollment.session ?? "",

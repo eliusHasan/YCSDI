@@ -1,16 +1,16 @@
 import PDFDocument from "pdfkit";
-import { GRADING_SYSTEM } from "../../models/Enrollment.js";
+import { uploadPdf } from "./shared.js";
 import {
-  BRAND,
-  COLORS,
+  DOC_GREEN,
+  DOC_INK,
   drawBadge,
-  drawFrame,
-  drawLogo,
-  drawSignature,
-  drawWatermark,
-  qrBuffer,
-  uploadPdf,
-} from "./shared.js";
+  drawDocFrame,
+  drawDocHeader,
+  drawDocLogo,
+  drawToken,
+  registerDocFonts,
+  type DocFonts,
+} from "./doc-common.js";
 
 export interface MarksheetSubject {
   name: string;
@@ -38,17 +38,160 @@ export interface MarksheetInput {
   cgpa: number;
 }
 
-function gradingRowLabel(index: number): string {
-  const min = GRADING_SYSTEM[index][0];
-  if (index === 0) return `${min} or Above`;
-  const prevMin = GRADING_SYSTEM[index - 1][0];
-  if (min === 0) return `Below ${prevMin}`;
-  return `${min} - Below ${prevMin}`;
+const ROW_LABELS: Array<[string, (i: MarksheetInput) => string]> = [
+  ["Name of the student", (i) => i.studentName],
+  ["Father's Name", (i) => i.fatherName],
+  ["Mother's Name", (i) => i.motherName],
+  ["Roll No", (i) => i.rollNo],
+  ["Registration No", (i) => i.registrationNo],
+  ["Institution", (i) => i.instituteName],
+  ["Course Name", (i) => i.courseTitle],
+  ["Course Duration", (i) => i.courseDuration],
+  ["Session", (i) => i.session],
+  ["Final GPA", (i) => (Number.isFinite(i.cgpa) ? i.cgpa.toFixed(2) : "")],
+  ["Letter Grade", (i) => i.letterGrade],
+];
+const ROW_Y = [189, 207.96, 226.96, 245.95, 264.95, 283.94, 302.94, 321.94, 340.93, 359.93, 378.92];
+const LABEL_X = 56.48;
+const COLON_X = 195;
+const VALUE_X = 217.49;
+const VALUE_MAX = 470;
+const ROW_SIZE = 12;
+
+const GRADING_ROWS: Array<[string, string, string]> = [
+  ["80 or Above", "A+", "4.00"],
+  ["75-Below 80", "A", "3.75"],
+  ["70-Below 75", "A-", "3.50"],
+  ["65-Below 70.", "B+", "3.25"],
+  ["60-Below 65", "B", "3.00"],
+  ["55-Below 60.", "B-", "2.75"],
+  ["50- Below 55", "C+", "2.50"],
+  ["45-Below 50", "C", "2.25"],
+  ["40-Below 45", "D", "2.00"],
+  ["Below 40", "F", "0.00"],
+];
+
+interface Col {
+  label: string;
+  w: number;
+  align: "left" | "center";
+}
+const TABLE_COLS: Col[] = [
+  { label: "Subject", w: 204, align: "left" },
+  { label: "Full Mark", w: 75, align: "center" },
+  { label: "Obtained", w: 75, align: "center" },
+  { label: "Grade", w: 65, align: "center" },
+  { label: "GP", w: 65, align: "center" },
+];
+const TABLE_X = 55.5;
+const TABLE_TOP = 426;
+const TABLE_BOTTOM = 700; // keep clear of the photo box + footer
+
+/** Per-subject marks table (green header), drawn below the Final Results badge. */
+function drawSubjectsTable(doc: PDFKit.PDFDocument, fonts: DocFonts, input: MarksheetInput): void {
+  const n = input.subjects.length;
+  const headH = 22;
+  const totalH = 22;
+  const rowH = Math.max(15, Math.min(20, (TABLE_BOTTOM - TABLE_TOP - headH - totalH) / Math.max(1, n)));
+  const tableW = TABLE_COLS.reduce((a, c) => a + c.w, 0);
+
+  const cell = (text: string, colX: number, col: Col, topY: number, h: number, font: string, color: string, size = 9.5) => {
+    doc.font(font).fontSize(size);
+    const baseline = topY + h / 2 + size * 0.34;
+    if (col.align === "left") {
+      drawToken(doc, font, { x: colX + 6, y: baseline, size, str: text, color });
+    } else {
+      const tw = doc.widthOfString(text);
+      drawToken(doc, font, { x: colX + (col.w - tw) / 2, y: baseline, size, str: text, color });
+    }
+  };
+
+  // Header row (green fill, white text).
+  doc.rect(TABLE_X, TABLE_TOP, tableW, headH).fill(DOC_GREEN);
+  let cx = TABLE_X;
+  for (const col of TABLE_COLS) {
+    cell(col.label, cx, col, TABLE_TOP, headH, fonts.calibriBold, "#FFFFFF");
+    cx += col.w;
+  }
+
+  // Subject rows.
+  let ty = TABLE_TOP + headH;
+  doc.lineWidth(0.6).strokeColor(DOC_INK);
+  for (const s of input.subjects) {
+    const cells = [s.name, s.fullMark.toFixed(0), s.obtainedMark.toFixed(0), s.letterGrade, s.gradePoint.toFixed(2)];
+    cx = TABLE_X;
+    TABLE_COLS.forEach((col, i) => {
+      doc.rect(cx, ty, col.w, rowH).stroke();
+      cell(cells[i], cx, col, ty, rowH, i === 0 ? fonts.calibri : fonts.calibriBold, DOC_INK, 9);
+      cx += col.w;
+    });
+    ty += rowH;
+  }
+
+  // Total / CGPA row (faint green tint, bold).
+  doc.save();
+  doc.fillOpacity(0.08).rect(TABLE_X, ty, tableW, totalH).fill(DOC_GREEN);
+  doc.restore();
+  doc.fillOpacity(1);
+  const totals = ["Total / CGPA", input.totalFull.toFixed(0), input.totalObtained.toFixed(0), input.letterGrade, input.cgpa.toFixed(2)];
+  cx = TABLE_X;
+  doc.lineWidth(0.8).strokeColor(DOC_INK);
+  TABLE_COLS.forEach((col, i) => {
+    doc.rect(cx, ty, col.w, totalH).stroke();
+    cell(totals[i], cx, col, ty, totalH, fonts.calibriBold, DOC_INK, 9.5);
+    cx += col.w;
+  });
+}
+
+function drawValue(doc: PDFKit.PDFDocument, font: string, str: string, x: number, y: number, maxW: number): void {
+  let size = ROW_SIZE;
+  doc.font(font).fontSize(size);
+  const w = doc.widthOfString(str);
+  if (w > maxW) size = Math.max(7, (size * maxW) / w);
+  drawToken(doc, font, { x, y, size, str: str || "—", color: DOC_INK });
+}
+
+function drawGradingTable(doc: PDFKit.PDFDocument, fonts: DocFonts): void {
+  const X = 481.5;
+  const RIGHT = 555;
+  const TOP = 91.5;
+  const TITLE_BOTTOM = 103.5;
+  const BOTTOM = 193.5;
+  const COL1 = 517.7; // range | grade
+  const COL2 = 537.5; // grade | gpa
+  const rowH = (BOTTOM - TITLE_BOTTOM) / GRADING_ROWS.length;
+
+  doc.lineWidth(0.9).strokeColor(DOC_INK);
+  doc.rect(X, TOP, RIGHT - X, BOTTOM - TOP).stroke();
+  doc.moveTo(X, TITLE_BOTTOM).lineTo(RIGHT, TITLE_BOTTOM).stroke();
+  for (let r = 1; r < GRADING_ROWS.length; r++) {
+    const y = TITLE_BOTTOM + r * rowH;
+    doc.moveTo(X, y).lineTo(RIGHT, y).stroke();
+  }
+  doc.moveTo(COL1, TITLE_BOTTOM).lineTo(COL1, BOTTOM).stroke();
+  doc.moveTo(COL2, TITLE_BOTTOM).lineTo(COL2, BOTTOM).stroke();
+
+  // Title (Californian FB Bold), centred across the table.
+  doc.font(fonts.californian).fontSize(9.308);
+  const tw = doc.widthOfString("Grading System");
+  drawToken(doc, fonts.californian, {
+    x: (X + RIGHT) / 2 - tw / 2,
+    y: 99.97,
+    size: 9.308,
+    str: "Grading System",
+    color: DOC_INK,
+  });
+
+  // Cells (Calisto MT).
+  GRADING_ROWS.forEach(([range, grade, gpa], i) => {
+    const y = 109.45 + i * (190.42 - 109.45) / 9;
+    drawToken(doc, fonts.calisto, { x: 484.55, y, size: 5.52, str: range, color: DOC_INK });
+    drawToken(doc, fonts.calisto, { x: 524.67, y, size: 5.52, str: grade, color: DOC_INK });
+    drawToken(doc, fonts.calisto, { x: 540.49, y, size: 5.52, str: gpa, color: DOC_INK });
+  });
 }
 
 export async function render(input: MarksheetInput): Promise<Buffer> {
-  const qr = await qrBuffer(input.serialNo);
-
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: "A4", layout: "portrait", margin: 0 });
@@ -57,122 +200,58 @@ export async function render(input: MarksheetInput): Promise<Buffer> {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      const W = doc.page.width;
-      const H = doc.page.height;
-      drawFrame(doc);
-      drawWatermark(doc, BRAND.shortName);
+      const fonts = registerDocFonts(doc);
+      drawDocFrame(doc, "marksheet-border.png");
 
-      // Header — title is centred in the band to the RIGHT of the logo so the
-      // logo never overlaps the institute name.
-      doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11)
-        .text(BRAND.govtLine, 0, 44, { align: "center" });
-      drawLogo(doc, 46, 56, 52);
-      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(16)
-        .text(BRAND.name, 112, 70, { align: "center", width: W - 157 });
-      drawBadge(doc, W / 2 - 95, 100, "Academic Transcript");
-
-      // Serial No
-      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(12)
-        .text(`Serial No: ${input.serialNo}`, 55, 150);
-
-      // Grading system table (top right)
-      const gx = W - 230;
-      const gy = 145;
-      const gw = 185;
-      const colA = 110;
-      const colB = 35;
-      const gRowH = 14;
-      doc.lineWidth(1).strokeColor(COLORS.navy).rect(gx, gy, gw, gRowH).stroke();
-      doc.fillColor(COLORS.navy).font("Helvetica-Bold").fontSize(8.5)
-        .text("Grading System", gx, gy + 3.5, { width: gw, align: "center" });
-      let gry = gy + gRowH;
-      GRADING_SYSTEM.forEach((band, i) => {
-        doc.lineWidth(0.5).strokeColor(COLORS.line);
-        doc.rect(gx, gry, colA, gRowH).stroke();
-        doc.rect(gx + colA, gry, colB, gRowH).stroke();
-        doc.rect(gx + colA + colB, gry, gw - colA - colB, gRowH).stroke();
-        doc.fillColor(COLORS.ink).font("Helvetica").fontSize(7)
-          .text(gradingRowLabel(i), gx + 4, gry + 3.5, { width: colA - 6 });
-        doc.font("Helvetica").fontSize(7).text(band[1], gx + colA, gry + 3.5, { width: colB, align: "center" });
-        doc.text(band[2].toFixed(2), gx + colA + colB, gry + 3.5, { width: gw - colA - colB, align: "center" });
-        gry += gRowH;
-      });
-
-      // Left column fields
-      const labelX = 55;
-      const valueX = 195;
-      let y = 195;
-      const rowGap = 23;
-      const row = (label: string, value: string, bold = false) => {
-        doc.fillColor(COLORS.muted).font("Helvetica").fontSize(11).text(label, labelX, y, { width: valueX - labelX - 6 });
-        doc.fillColor(COLORS.ink).font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(11)
-          .text(`: ${value || "—"}`, valueX, y, { width: gx - valueX - 10 });
-        y += rowGap;
-      };
-
-      row("Name of the student", input.studentName, true);
-      row("Father's Name", input.fatherName);
-      row("Mother's Name", input.motherName);
-      row("Roll No", input.rollNo, true);
-      row("Registration No", input.registrationNo, true);
-      row("Institution", input.instituteName, true);
-      row("Technology", input.courseTitle, true);
-      row("Course Duration", input.courseDuration);
-      row("Session", input.session);
-
-      // Final Results badge + per-subject table
-      y = Math.max(y, gry) + 14;
-      drawBadge(doc, W / 2 - 55, y, "Final Results");
-      y += 46;
-
-      const cols = [
-        { key: "name", label: "Subject", w: 215, align: "left" as const },
-        { key: "full", label: "Full Mark", w: 75, align: "center" as const },
-        { key: "obt", label: "Obtained", w: 75, align: "center" as const },
-        { key: "grade", label: "Grade", w: 60, align: "center" as const },
-        { key: "gp", label: "GP", w: 60, align: "center" as const },
-      ];
-      const tableX = 55;
-      const tableW = cols.reduce((a, c) => a + c.w, 0);
-      const thH = 24;
-      const rowH = Math.max(18, Math.min(24, Math.floor((H - 150 - y) / (input.subjects.length + 2))));
-
-      const drawRow = (cells: string[], topY: number, h: number, opts: { header?: boolean; bold?: boolean } = {}) => {
-        let cx = tableX;
-        cols.forEach((c, i) => {
-          if (opts.header) doc.rect(cx, topY, c.w, h).fillAndStroke("#EEF2F6", COLORS.navy);
-          else doc.lineWidth(0.6).strokeColor(COLORS.navy).rect(cx, topY, c.w, h).stroke();
-          doc.fillColor(opts.header ? COLORS.navy : COLORS.ink)
-            .font(opts.header || opts.bold ? "Helvetica-Bold" : "Helvetica")
-            .fontSize(opts.header ? 9.5 : 9.5)
-            .text(cells[i], cx + (c.align === "left" ? 6 : 0), topY + h / 2 - 5, {
-              width: c.align === "left" ? c.w - 10 : c.w,
-              align: c.align,
-            });
-          cx += c.w;
-        });
-      };
-
-      drawRow(["Subject", "Full Mark", "Obtained", "Grade", "GP"], y, thH, { header: true });
-      let ty = y + thH;
-      input.subjects.forEach((s) => {
-        drawRow([s.name, s.fullMark.toFixed(0), s.obtainedMark.toFixed(0), s.letterGrade, s.gradePoint.toFixed(2)], ty, rowH);
-        ty += rowH;
-      });
-      // Totals row — shade first, then draw bordered cells + bold text on top.
-      doc.rect(tableX, ty, tableW, thH).fillOpacity(0.1).fill(COLORS.gold);
-      doc.fillOpacity(1);
-      drawRow(
-        ["TOTAL / CGPA", input.totalFull.toFixed(0), input.totalObtained.toFixed(0), input.letterGrade, input.cgpa.toFixed(2)],
-        ty,
-        thH,
-        { bold: true },
+      // Header: govt line, title, small top-left logo.
+      drawDocHeader(
+        doc,
+        fonts,
+        { x: 96.4, y: 73.84, size: 32.951, hScale: 9.053 / 32.951, refWidth: 462.53 },
+        { x: 95.29, y: 42.62, size: 13.5, hScale: 20.344 / 13.5, refWidth: 463.55 },
       );
+      drawDocLogo(doc, 37, 40, 60);
 
-      // QR (bottom left) + signatures
-      doc.image(qr, 55, H - 125, { width: 84, height: 84 });
-      drawSignature(doc, W / 2 - 40, H - 58, 110, "Prepared by");
-      drawSignature(doc, W - 230, H - 58, 175, "Controller of Examinations");
+      drawBadge(doc, fonts.resBadge, {
+        text: "Academic Transcript",
+        size: 17.371,
+        hScale: 14.333 / 17.371,
+        rect: { x: 220, y: 95, w: 177, h: 22.5 },
+        radius: 4,
+        baselineY: 108.9,
+      });
+
+      drawGradingTable(doc, fonts);
+
+      drawToken(doc, fonts.arial, { x: 55.67, y: 155.05, size: 13, str: `Serial No: ${input.serialNo}`, color: DOC_INK });
+
+      ROW_LABELS.forEach(([label, get], idx) => {
+        const y = ROW_Y[idx];
+        drawToken(doc, fonts.calibriBold, { x: LABEL_X, y, size: ROW_SIZE, str: label, color: DOC_INK });
+        drawToken(doc, fonts.calibriBold, { x: COLON_X, y, size: ROW_SIZE, str: ":", color: DOC_INK });
+        drawValue(doc, fonts.calibriBold, get(input), VALUE_X, y, VALUE_MAX - VALUE_X);
+      });
+
+      // Final Results badge (sharp green box) + per-subject marks table.
+      drawBadge(doc, fonts.resFinal, {
+        text: "Final Results",
+        size: 14.086,
+        hScale: 1,
+        rect: { x: 255.5, y: 395, w: 95, h: 21 },
+        radius: 2,
+        baselineY: 409,
+      });
+      if (input.subjects.length > 0) drawSubjectsTable(doc, fonts, input);
+
+      // Photo box (bottom left).
+      doc.lineWidth(1).strokeColor(DOC_INK).rect(55.5, 725.5, 85, 74.5).stroke();
+
+      // Signature lines + captions.
+      doc.lineWidth(1).strokeColor(DOC_INK);
+      doc.moveTo(210, 782).lineTo(352, 782).stroke();
+      doc.moveTo(430, 782).lineTo(574, 782).stroke();
+      drawToken(doc, fonts.calibriBold, { x: 266.09, y: 795.91, size: 11, hScale: 9.124 / 11, str: "Prepared by", color: DOC_INK });
+      drawToken(doc, fonts.calibriBold, { x: 442.62, y: 795.25, size: 11, hScale: 9.124 / 11, str: "Controller of Examinations", color: DOC_INK });
 
       doc.end();
     } catch (err) {

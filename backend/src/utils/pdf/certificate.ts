@@ -38,6 +38,8 @@ const RED = "#F8281A";
 const FONTS = {
   latin: { file: "fonts/latin-wide.otf", fallback: "Helvetica-Bold" },
   rounded: { file: "fonts/arial-rounded-bold.otf", fallback: "Helvetica-Bold" },
+  // Blackletter face for the "Certificate" heading (UnifrakturCook, OFL).
+  blackletter: { file: "fonts/cert-blackletter.ttf", fallback: "Times-Bold" },
   corsiva: { file: "fonts/monotype-corsiva.otf", fallback: "Times-Italic" },
   birgine: { file: "fonts/birgine.otf", fallback: "Times-Roman" },
   narrow: { file: "fonts/arial-narrow.otf", fallback: "Helvetica" },
@@ -68,7 +70,7 @@ const STATIC_TEXT: TextItem[] = [
   { f: "latin", x: 50.76, y: 87.98, sx: 14.486, sy: 64.376, w: 740.1, str: "YOUTH CAREER & SKILLS DEVELOPMENT TRAINING" },
   { f: "narrow", x: 427.43, y: 173.08, sx: 8.253, sy: 6.854, w: 63.82, str: "www.ycsdi.netlify.app" },
   { f: "birgine", x: 260.31, y: 197.12, sx: 16.256, sy: 13.5, w: 370.4, str: "Approved By Govt. of The People's Republic of Bangladesh" },
-  { f: "rounded", x: 347.05, y: 236.31, sx: 33.775, sy: 41.289, w: 222.74, str: "CERTIFICATE", color: GREEN },
+  // "Certificate" heading is drawn separately in render() with the blackletter face.
 
   // Incorporation panel (left sidebar, top box)
   { f: "myriad", x: 72.29, y: 151.67, sx: 10.338, sy: 10.338, w: 116.08, str: "Certificate of Incorporation" },
@@ -267,6 +269,23 @@ export async function render(input: CertificateInput): Promise<Buffer> {
         }
       }
 
+      // Faint centred logo watermark (drawn over the border's white field, under
+      // all text), matching the other documents.
+      const watermark = loadAsset("logo.png");
+      if (watermark) {
+        const wmW = 250;
+        const wmH = wmW * (2088 / 2461);
+        doc.save();
+        doc.opacity(0.06);
+        try {
+          doc.image(watermark, (W - wmW) / 2, (H - wmH) / 2, { width: wmW, height: wmH });
+        } catch {
+          /* optional */
+        }
+        doc.restore();
+        doc.opacity(1);
+      }
+
       // Header artwork: institute logo + govt emblem.
       const logo = loadAsset("cert-logo.png");
       if (logo) {
@@ -303,6 +322,20 @@ export async function render(input: CertificateInput): Promise<Buffer> {
 
       // Static text, verbatim from the artwork.
       for (const item of STATIC_TEXT) drawRun(doc, fonts[item.f], item);
+
+      // "Certificate" heading in the blackletter face (user-specified), centred
+      // where the original CERTIFICATE word sat in the artwork.
+      {
+        const text = "Certificate";
+        const centerX = 458.42;
+        const baseline = 238;
+        const targetW = 212;
+        doc.font(fonts.blackletter).fontSize(100);
+        const size = Math.min(52, (100 * targetW) / doc.widthOfString(text));
+        doc.fontSize(size);
+        const w = doc.widthOfString(text);
+        drawToken(doc, fonts.blackletter, { x: centerX - w / 2, y: baseline, sx: size, sy: size, str: text, color: GREEN });
+      }
 
       // Corsiva fill-in labels with their dotted leaders; capture dot spans.
       const lineSpans = BODY_LINES.map((line) => {

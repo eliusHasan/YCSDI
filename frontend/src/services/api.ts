@@ -423,11 +423,27 @@ export const documentApi = {
     api.delete<{ message: string }>(`/admin/documents/${type}/${id}`),
 };
 
+export interface VerifiedDocument {
+  type: DocumentType;
+  label: string;
+  serialNo: string;
+  pdfUrl: string;
+  issuedAt: string;
+  course?: { _id: string; title: string } & Record<string, unknown>;
+  institute?: { _id: string; name: string; code?: string } & Record<string, unknown>;
+}
+
 export interface VerifyResponse {
   found: boolean;
-  type?: DocumentType;
-  label?: string;
-  document?: IssuedDocument & Record<string, unknown>;
+  student?: {
+    _id: string;
+    fullName: string;
+    fatherName?: string;
+    motherName?: string;
+    registrationId: string;
+    photoUrl?: string;
+  } & Record<string, unknown>;
+  documents?: VerifiedDocument[];
   message?: string;
 }
 
