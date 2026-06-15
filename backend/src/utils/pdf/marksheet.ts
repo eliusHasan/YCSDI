@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { uploadPdf } from "./shared.js";
+import { qrBuffer, uploadPdf } from "./shared.js";
 import {
   DOC_GREEN,
   DOC_INK,
@@ -81,7 +81,7 @@ const TABLE_COLS: Col[] = [
   { label: "Full Mark", w: 75, align: "center" },
   { label: "Obtained", w: 75, align: "center" },
   { label: "Grade", w: 65, align: "center" },
-  { label: "GP", w: 65, align: "center" },
+  { label: "CGPA", w: 65, align: "center" },
 ];
 const TABLE_X = 55.5;
 const TABLE_TOP = 426;
@@ -192,6 +192,8 @@ function drawGradingTable(doc: PDFKit.PDFDocument, fonts: DocFonts): void {
 }
 
 export async function render(input: MarksheetInput): Promise<Buffer> {
+  const qr = await qrBuffer(input.serialNo);
+
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: "A4", layout: "portrait", margin: 0 });
@@ -200,25 +202,28 @@ export async function render(input: MarksheetInput): Promise<Buffer> {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
+      const W = doc.page.width;
       const fonts = registerDocFonts(doc);
       drawDocFrame(doc, "marksheet-border.png");
 
-      // Header: govt line, title, small top-left logo.
+      // Header: govt line, title, and a logo vertically centred on the title line.
       drawDocHeader(
         doc,
         fonts,
         { x: 96.4, y: 73.84, size: 32.951, hScale: 9.053 / 32.951, refWidth: 462.53 },
         { x: 95.29, y: 42.62, size: 13.5, hScale: 20.344 / 13.5, refWidth: 463.55 },
       );
-      drawDocLogo(doc, 37, 40, 60);
+      drawDocLogo(doc, 36, 31, 56);
 
       drawBadge(doc, fonts.resBadge, {
         text: "Academic Transcript",
         size: 17.371,
         hScale: 14.333 / 17.371,
-        rect: { x: 220, y: 95, w: 177, h: 22.5 },
+        centerX: W / 2,
+        top: 95,
+        height: 24,
+        padX: 16,
         radius: 4,
-        baselineY: 108.9,
       });
 
       drawGradingTable(doc, fonts);
@@ -227,9 +232,12 @@ export async function render(input: MarksheetInput): Promise<Buffer> {
 
       ROW_LABELS.forEach(([label, get], idx) => {
         const y = ROW_Y[idx];
+        // Rows below the grading table can use the full width; the top row stays
+        // clear of the table's bottom-left corner.
+        const rightEdge = y > 200 ? 560 : VALUE_MAX;
         drawToken(doc, fonts.calibriBold, { x: LABEL_X, y, size: ROW_SIZE, str: label, color: DOC_INK });
         drawToken(doc, fonts.calibriBold, { x: COLON_X, y, size: ROW_SIZE, str: ":", color: DOC_INK });
-        drawValue(doc, fonts.calibriBold, get(input), VALUE_X, y, VALUE_MAX - VALUE_X);
+        drawValue(doc, fonts.calibriBold, get(input), VALUE_X, y, rightEdge - VALUE_X);
       });
 
       // Final Results badge (sharp green box) + per-subject marks table.
@@ -237,14 +245,16 @@ export async function render(input: MarksheetInput): Promise<Buffer> {
         text: "Final Results",
         size: 14.086,
         hScale: 1,
-        rect: { x: 255.5, y: 395, w: 95, h: 21 },
+        centerX: W / 2,
+        top: 395,
+        height: 22,
+        padX: 14,
         radius: 2,
-        baselineY: 409,
       });
       if (input.subjects.length > 0) drawSubjectsTable(doc, fonts, input);
 
-      // Photo box (bottom left).
-      doc.lineWidth(1).strokeColor(DOC_INK).rect(55.5, 725.5, 85, 74.5).stroke();
+      // Verification QR code (bottom left).
+      doc.image(qr, 55.5, 725.5, { width: 74.5, height: 74.5 });
 
       // Signature lines + captions.
       doc.lineWidth(1).strokeColor(DOC_INK);

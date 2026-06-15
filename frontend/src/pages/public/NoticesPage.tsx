@@ -50,7 +50,7 @@ export function NoticesPage() {
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-white/60 font-medium">
             Important announcements, exam schedules, academic calendars, 
-            and official notices from the Youth Career & Skill Development Institute.
+            and official notices from Youth Career & Skills Development Training.
           </p>
         </div>
       </section>

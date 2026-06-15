@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 
 /** YCSDI brand identity used across every generated document. */
 export const BRAND = {
-  name: "YOUTH CAREER & SKILL DEVELOPMENT INSTITUTE",
+  name: "YOUTH CAREER & SKILLS DEVELOPMENT TRAINING",
   shortName: "YCSDI",
   govtLine: "Approved By Govt. of the People's Republic of Bangladesh",
   regLine: "GOVT. REGISTERED ACADEMY · REG NO 158451",

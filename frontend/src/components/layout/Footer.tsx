@@ -33,9 +33,9 @@ export function Footer() {
               <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white p-1.5 transition-transform duration-500 group-hover:scale-110 shadow-lg shadow-black/20">
                 <img src="/logo.png" alt="YCSDI logo" className="h-full w-full object-contain" />
               </span>
-              <span className="text-xl font-black uppercase leading-[1.1] tracking-tight">
-                Youth Career <br />
-                <span className="text-theme-soft italic">Academy.</span>
+              <span className="grid text-lg font-black uppercase leading-[1.15] tracking-tight">
+                <span className="whitespace-nowrap">Youth Career &amp; Skills</span>
+                <span className="text-theme-soft italic whitespace-nowrap">Development Training</span>
               </span>
             </RouterLink>
             <p className="max-w-xs text-sm leading-relaxed text-white/50 mb-8 font-medium">
@@ -115,7 +115,7 @@ export function Footer() {
       <div className="border-t border-white/5 bg-black/20">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <p className="text-xs font-bold text-white/30 uppercase tracking-widest text-center md:text-left">
-            &copy; {currentYear} Youth Career & Skill Development Institute. <br className="sm:hidden" />
+            &copy; {currentYear} Youth Career & Skills Development Training. <br className="sm:hidden" />
             <span className="text-white/10 ml-2 hidden sm:inline">|</span>
             <span className="sm:ml-2">All Rights Reserved.</span>
           </p>

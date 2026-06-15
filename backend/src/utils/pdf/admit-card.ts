@@ -64,7 +64,9 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
 
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: "A4", layout: "portrait", margin: 0 });
+      // The admit card is a compact card (not full A4): the design ends just
+      // below the directions, matching the reference border (which runs y7–y410).
+      const doc = new PDFDocument({ size: [595.28, 417], margin: 0 });
       const chunks: Buffer[] = [];
       doc.on("data", (c: Buffer) => chunks.push(c));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
@@ -73,35 +75,43 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
       const fonts = registerDocFonts(doc);
       drawDocFrame(doc, "admit-border.png");
 
-      // Header: govt line, title, small top-left logo.
+      // Header: govt line, title, and a logo vertically centred on the title.
       drawDocHeader(
         doc,
         fonts,
         { x: 105.72, y: 82.69, size: 32.951, hScale: 8.949 / 32.951, refWidth: 457.2 },
         { x: 107.46, y: 51.47, size: 13.5, hScale: 19.825 / 13.5, refWidth: 451.72 },
       );
-      drawDocLogo(doc, 36, 56, 62);
+      drawDocLogo(doc, 38, 49, 62);
 
       drawBadge(doc, fonts.calibriBold, {
         text: "Admit Card",
         size: 23.071,
         hScale: 26.064 / 23.071,
-        rect: { x: 226, y: 108, w: 143, h: 29 },
+        centerX: doc.page.width / 2,
+        top: 108,
+        height: 29,
+        padX: 18,
         radius: 4,
-        baselineY: 124,
       });
 
       drawLeftRows(doc, fonts, input);
 
-      // Right column: photo box, Roll/Reg boxes, Sex.
-      doc.lineWidth(1).strokeColor(DOC_INK);
-      doc.rect(481.5, 150, 69.5, 52).stroke();
+      // Right column: photo (borderless, centred over the Roll/Reg boxes), then
+      // the Roll/Reg/Sex fields.
+      const boxCenterX = 481.5 + 69.5 / 2;
+      const photoW = 74;
+      const photoH = 66;
+      const photoX = boxCenterX - photoW / 2;
+      const photoY = 143;
       if (photo) {
         try {
-          doc.image(photo, 482.5, 151, { fit: [67.5, 50], align: "center", valign: "center" });
+          doc.image(photo, photoX, photoY, { fit: [photoW, photoH], align: "center", valign: "center" });
         } catch {
-          /* ignore */
+          /* ignore bad photo */
         }
+      } else {
+        doc.lineWidth(0.8).strokeColor("#C9C9C9").rect(photoX, photoY, photoW, photoH).stroke();
       }
 
       const rightLabel = (label: string, y: number) =>
@@ -118,7 +128,8 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
       doc.rect(481.5, 233, 69.5, 15.5).stroke();
       drawValue(doc, fonts.calibriBold, input.rollNo, 486, 224.5, 60);
       drawValue(doc, fonts.calibriBold, input.registrationNo, 486, 244.5, 60);
-      drawValue(doc, fonts.calibriBold, input.sex, 481, 263.33, 90);
+      const sex = input.sex ? input.sex.charAt(0).toUpperCase() + input.sex.slice(1).toLowerCase() : "";
+      drawValue(doc, fonts.calibriBold, sex, 481, 263.33, 90);
 
       // Directions (Arial Narrow).
       const dir = (str: string, y: number) =>

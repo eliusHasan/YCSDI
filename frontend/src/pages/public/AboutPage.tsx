@@ -37,7 +37,7 @@ export function AboutPage() {
             <span className="text-theme-soft italic">generation of leaders.</span>
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-white/60 font-medium leading-relaxed">
-            Youth Career & Skill Development Institute (YCSDI) is a premier academy 
+            Youth Career & Skills Development Training (YCSDI) is a premier institution
             dedicated to providing high-impact professional training across Bangladesh.
           </p>
         </div>

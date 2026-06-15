@@ -98,28 +98,38 @@ export function drawRun(
   });
 }
 
-/** Measured badge rectangle (from the reference artwork). */
-export interface BadgeRect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-/** Green pill/box with centred heavy white caption — the document title badge. */
+/**
+ * Green pill/box title badge: the box auto-sizes to the caption (symmetric
+ * horizontal padding) and the caption is centred both horizontally (on
+ * `centerX`) and vertically within the box, so it never sits off-centre
+ * regardless of the font's metrics.
+ */
 export function drawBadge(
   doc: PDFKit.PDFDocument,
   font: string,
-  o: { text: string; size: number; hScale?: number; rect: BadgeRect; radius: number; baselineY: number },
+  o: {
+    text: string;
+    size: number;
+    hScale?: number;
+    centerX: number;
+    top: number;
+    height: number;
+    padX?: number;
+    radius: number;
+    textColor?: string;
+  },
 ): void {
-  const { rect, radius } = o;
-  if (radius > 0) doc.roundedRect(rect.x, rect.y, rect.w, rect.h, radius).fill(DOC_GREEN);
-  else doc.rect(rect.x, rect.y, rect.w, rect.h).fill(DOC_GREEN);
-  const h = o.hScale ?? 1;
+  const hs = o.hScale ?? 1;
   doc.font(font).fontSize(o.size);
-  const tw = doc.widthOfString(o.text) * h;
-  const tx = rect.x + (rect.w - tw) / 2;
-  drawToken(doc, font, { x: tx, y: o.baselineY, size: o.size, hScale: h, str: o.text, color: DOC_WHITE });
+  const tw = doc.widthOfString(o.text) * hs;
+  const padX = o.padX ?? 16;
+  const w = tw + padX * 2;
+  const x = o.centerX - w / 2;
+  if (o.radius > 0) doc.roundedRect(x, o.top, w, o.height, o.radius).fill(DOC_GREEN);
+  else doc.rect(x, o.top, w, o.height).fill(DOC_GREEN);
+  // Vertically centre on the cap height (≈0.68·size) within the box.
+  const baseline = o.top + o.height / 2 + o.size * 0.34;
+  drawToken(doc, font, { x: o.centerX - tw / 2, y: baseline, size: o.size, hScale: hs, str: o.text, color: o.textColor ?? DOC_WHITE });
 }
 
 /**
@@ -131,15 +141,16 @@ export function drawDocFrame(doc: PDFKit.PDFDocument, borderAsset: string): void
   const H = doc.page.height;
   doc.rect(0, 0, W, H).fill(DOC_WHITE);
 
-  // Faint logo watermark, centred.
+  // Faint logo watermark, centred on the page (the page is the design area —
+  // the admit card uses a compact page, so this lands in the card's middle).
   const logo = loadAsset("logo.png");
   if (logo) {
-    const wmW = 270;
+    const wmW = Math.min(270, W * 0.46);
     const wmH = wmW * (2088 / 2461);
     doc.save();
     doc.opacity(0.06);
     try {
-      doc.image(logo, (W - wmW) / 2, H * 0.55 - wmH / 2, { width: wmW, height: wmH });
+      doc.image(logo, (W - wmW) / 2, H / 2 - wmH / 2, { width: wmW, height: wmH });
     } catch {
       /* optional */
     }

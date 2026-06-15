@@ -317,8 +317,24 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       doc.moveTo(292, 528.1).lineTo(383, 528.1).stroke();
       doc.moveTo(655, 528.1).lineTo(746, 528.1).stroke();
 
-      // QR code, centred in the "Scan for Verification" slot.
-      doc.image(qr, 96.5, 431.75, { width: 71, height: 71 });
+      // Chairman's signature, centred just above the right rule.
+      const chairmanSign = loadAsset("chairman-sign.png");
+      if (chairmanSign) {
+        try {
+          const sw = 104;
+          const sh = sw * (252 / 658);
+          doc.image(chairmanSign, (655 + 746) / 2 - sw / 2, 528.1 - sh - 1, { width: sw });
+        } catch {
+          /* optional */
+        }
+      }
+
+      // QR code, centred in the "Scan for Verification" slot (kept compact).
+      {
+        const qrSize = 54;
+        const qrCenterX = 129.9; // centre of the left panel
+        doc.image(qr, qrCenterX - qrSize / 2, 444, { width: qrSize, height: qrSize });
+      }
 
       // Static text, verbatim from the artwork.
       for (const item of STATIC_TEXT) drawRun(doc, fonts[item.f], item);

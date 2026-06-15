@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { fetchImageBuffer, uploadPdf } from "./shared.js";
+import { fetchImageBuffer, qrBuffer, uploadPdf } from "./shared.js";
 import {
   DOC_INK,
   drawBadge,
@@ -30,11 +30,13 @@ export interface RegistrationCardInput {
   photoUrl?: string;
 }
 
+const capWord = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "");
+
 const ROW_LABELS: Array<[string, (i: RegistrationCardInput) => string]> = [
   ["Name of the student", (i) => i.studentName],
   ["Father's Name", (i) => i.fatherName],
   ["Mother's Name", (i) => i.motherName],
-  ["Gender", (i) => i.gender],
+  ["Gender", (i) => capWord(i.gender)],
   ["Name of the institute", (i) => i.instituteName],
   ["Post Office", (i) => i.postOffice],
   ["Upazila/Thana", (i) => i.upazilla],
@@ -50,7 +52,10 @@ const ROW_Y = [302.69, 331.68, 360.68, 389.67, 418.66, 447.66, 476.65, 505.65, 5
 const LABEL_X = 62.1;
 const COLON_X = 205.11;
 const VALUE_X = 220.11;
-const VALUE_MAX = 470; // right edge before the photo column
+// The first row sits beside the photo/QR column (kept narrow); every row below
+// it can run the full width to the inner border.
+const VALUE_MAX_TOP = 478;
+const VALUE_MAX_FULL = 558;
 const ROW_SIZE = 14;
 
 /** Draws a value, shrinking the font if it would overflow the available width. */
@@ -65,14 +70,16 @@ function drawValue(doc: PDFKit.PDFDocument, font: string, str: string, x: number
 function drawBody(doc: PDFKit.PDFDocument, fonts: DocFonts, input: RegistrationCardInput): void {
   ROW_LABELS.forEach(([label, get], idx) => {
     const y = ROW_Y[idx];
+    const rightEdge = y > 310 ? VALUE_MAX_FULL : VALUE_MAX_TOP;
     drawToken(doc, fonts.calibriBold, { x: LABEL_X, y, size: ROW_SIZE, str: label, color: DOC_INK });
     drawToken(doc, fonts.calibriBold, { x: COLON_X, y, size: ROW_SIZE, str: ":", color: DOC_INK });
-    drawValue(doc, fonts.calibriBold, get(input), VALUE_X, y, VALUE_MAX - VALUE_X);
+    drawValue(doc, fonts.calibriBold, get(input), VALUE_X, y, rightEdge - VALUE_X);
   });
 }
 
 export async function render(input: RegistrationCardInput): Promise<Buffer> {
   const photo = await fetchImageBuffer(input.photoUrl);
+  const qr = await qrBuffer(input.serialNo);
 
   return new Promise((resolve, reject) => {
     try {
@@ -96,27 +103,35 @@ export async function render(input: RegistrationCardInput): Promise<Buffer> {
       );
       drawDocLogo(doc, W / 2 - 47, 99, 94);
 
-      // Title badge (green pill).
+      // Title badge (green pill), centred on the page.
       drawBadge(doc, fonts.regBadge, {
         text: "Registration Card",
-        size: 20.6,
+        size: 19.5,
         hScale: 20.107 / 20.6,
-        rect: { x: 192.5, y: 185, w: 210, h: 27.5 },
-        radius: 13.75,
-        baselineY: 201.35,
+        centerX: W / 2,
+        top: 186,
+        height: 26,
+        padX: 15,
+        radius: 13,
       });
 
-      // Photo + secondary box (top right).
-      doc.lineWidth(1).strokeColor(DOC_INK);
-      doc.rect(486, 150, 80, 73).stroke();
-      doc.rect(486, 237, 80, 53).stroke();
+      // Photo (borderless) with the verification QR centred beneath it (top right).
+      const colCenterX = 526;
+      const photoW = 80;
+      const photoH = 82;
+      const photoX = colCenterX - photoW / 2;
+      const photoY = 150;
       if (photo) {
         try {
-          doc.image(photo, 487, 151, { fit: [78, 71], align: "center", valign: "center" });
+          doc.image(photo, photoX, photoY, { fit: [photoW, photoH], align: "center", valign: "center" });
         } catch {
           /* ignore bad photo */
         }
+      } else {
+        doc.lineWidth(0.8).strokeColor("#C9C9C9").rect(photoX, photoY, photoW, photoH).stroke();
       }
+      const qrSize = 66;
+      doc.image(qr, colCenterX - qrSize / 2, photoY + photoH + 6, { width: qrSize, height: qrSize });
 
       // Serial line.
       drawToken(doc, fonts.arial, { x: 56.67, y: 253, size: 13, str: `Serial No: ${input.serialNo}`, color: DOC_INK });
@@ -130,11 +145,11 @@ export async function render(input: RegistrationCardInput): Promise<Buffer> {
       doc.moveTo(205, sigY).lineTo(385, sigY).stroke();
       doc.moveTo(445, sigY).lineTo(562, sigY).stroke();
       const cap = (x: number, y: number, str: string) =>
-        drawToken(doc, fonts.calibriBold, { x, y, size: 14, hScale: 11.613 / 14, str, color: DOC_INK });
-      cap(71.43, 787.67, "Signature of Student");
-      cap(215.29, 787.67, "Signature of Head of the institute");
-      cap(452.16, 787.67, "Deputy Secretary");
-      cap(462.44, 804.66, "(Registration)");
+        drawToken(doc, fonts.calibriBold, { x, y, size: 10, hScale: 11.613 / 14, str, color: DOC_INK });
+      cap(71.43, 786, "Signature of Student");
+      cap(215.29, 786, "Signature of Head of the institute");
+      cap(452.16, 786, "Deputy Secretary");
+      cap(462.44, 800, "(Registration)");
 
       doc.end();
     } catch (err) {

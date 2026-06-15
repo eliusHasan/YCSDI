@@ -62,8 +62,8 @@ const Header = () => {
                 className="h-12 w-12 shrink-0 object-contain transition-transform duration-500 group-hover:scale-105"
               />
               <div className="flex flex-col">
-                <span className="text-base font-black uppercase leading-none tracking-tight text-theme-dark">Youth Career <span className="text-theme-accent">&</span></span>
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-theme-accent">Skill Development</span>
+                <span className="text-base font-black uppercase leading-none tracking-tight text-theme-dark">Youth Career <span className="text-theme-accent">&</span> Skills</span>
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-theme-accent">Development Training</span>
               </div>
             </Link>
 
