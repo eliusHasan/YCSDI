@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { fetchImageBuffer, formatDate, uploadPdf } from "./shared.js";
+import { fetchImageBuffer, formatDate, loadAsset, uploadPdf } from "./shared.js";
 import {
   DOC_INK,
   drawBadge,
@@ -138,7 +138,17 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
       dir("1. The examinee must bring the Registration Card along with the Admit Card to the examination hall.", 371.4);
       dir("2. The examinee must sign the attendance sheet; otherwise, the examinee will be considered absent.", 379.4);
 
-      // Controller signature (right).
+      // Controller (examiner) signature above the right rule.
+      const examinerSign = loadAsset("examiner-sign.png");
+      if (examinerSign) {
+        try {
+          const sw = 92;
+          const sh = sw * (748 / 1572);
+          doc.image(examinerSign, (445 + 574) / 2 - sw / 2, 370 - sh - 1, { width: sw });
+        } catch {
+          /* optional */
+        }
+      }
       doc.lineWidth(1).strokeColor(DOC_INK).moveTo(445, 370).lineTo(574, 370).stroke();
       drawToken(doc, fonts.narrow, { x: 457.49, y: 380.71, size: 7.125, hScale: 8.77 / 7.125, str: "Controller of Examinations", color: DOC_INK });
 

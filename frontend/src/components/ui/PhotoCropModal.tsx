@@ -1,4 +1,4 @@
-import { Check, Loader2, X, ZoomIn } from "lucide-react";
+import { Check, Loader2, RotateCcw, RotateCw, X, ZoomIn } from "lucide-react";
 import { useCallback, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 
@@ -20,8 +20,41 @@ function createImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-async function getCroppedBlob(src: string, crop: Area): Promise<Blob> {
+function getRadianAngle(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+// Dimensions of the bounding box that contains a rotated rectangle.
+function rotateSize(width: number, height: number, rotation: number) {
+  const rad = getRadianAngle(rotation);
+  return {
+    width: Math.abs(Math.cos(rad) * width) + Math.abs(Math.sin(rad) * height),
+    height: Math.abs(Math.sin(rad) * width) + Math.abs(Math.cos(rad) * height),
+  };
+}
+
+async function getCroppedBlob(src: string, crop: Area, rotation: number): Promise<Blob> {
   const image = await createImage(src);
+
+  // Draw the rotated image onto a canvas sized to its rotated bounding box.
+  const rotated = document.createElement("canvas");
+  const rotatedCtx = rotated.getContext("2d");
+  if (!rotatedCtx) throw new Error("Canvas not supported");
+
+  const { width: bBoxWidth, height: bBoxHeight } = rotateSize(
+    image.width,
+    image.height,
+    rotation,
+  );
+  rotated.width = bBoxWidth;
+  rotated.height = bBoxHeight;
+
+  rotatedCtx.translate(bBoxWidth / 2, bBoxHeight / 2);
+  rotatedCtx.rotate(getRadianAngle(rotation));
+  rotatedCtx.translate(-image.width / 2, -image.height / 2);
+  rotatedCtx.drawImage(image, 0, 0);
+
+  // Extract the crop region (its coordinates are in the rotated image space).
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(crop.width);
   canvas.height = Math.round(crop.height);
@@ -29,7 +62,7 @@ async function getCroppedBlob(src: string, crop: Area): Promise<Blob> {
   if (!ctx) throw new Error("Canvas not supported");
 
   ctx.drawImage(
-    image,
+    rotated,
     crop.x,
     crop.y,
     crop.width,
@@ -52,8 +85,12 @@ async function getCroppedBlob(src: string, crop: Area): Promise<Blob> {
 export function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
+
+  // Wrap to keep the slider in sync after quarter-turn buttons (0–359).
+  const rotateBy = (delta: number) => setRotation((r) => (((r + delta) % 360) + 360) % 360);
 
   const onCropComplete = useCallback((_area: Area, areaPixels: Area) => {
     setCroppedAreaPixels(areaPixels);
@@ -63,7 +100,7 @@ export function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
     if (!croppedAreaPixels) return;
     setProcessing(true);
     try {
-      const blob = await getCroppedBlob(src, croppedAreaPixels);
+      const blob = await getCroppedBlob(src, croppedAreaPixels, rotation);
       onConfirm(blob);
     } catch {
       setProcessing(false);
@@ -85,8 +122,36 @@ export function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
           <div className="text-center mb-6">
             <h3 className="text-lg font-black uppercase tracking-tight text-white">Crop Passport Photo</h3>
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mt-1">
-              Drag to position · Scroll or use the slider to zoom
+              Drag to position · Zoom and rotate with the sliders
             </p>
+          </div>
+
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              type="button"
+              onClick={() => rotateBy(-90)}
+              title="Rotate left 90°"
+              className="flex items-center gap-1.5 shrink-0 w-16 text-[10px] font-black uppercase tracking-widest text-theme-soft hover:text-white transition-colors"
+            >
+              <RotateCcw size={14} /> Rotate
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={359}
+              step={1}
+              value={rotation}
+              onChange={(e) => setRotation(Number(e.target.value))}
+              className="w-full accent-[#E2B26A] cursor-pointer"
+            />
+            <button
+              type="button"
+              onClick={() => rotateBy(90)}
+              title="Rotate right 90°"
+              className="shrink-0 p-1.5 rounded-lg text-theme-soft hover:bg-white/5 transition-colors"
+            >
+              <RotateCw size={16} />
+            </button>
           </div>
 
           <div className="relative w-full h-[340px] rounded-2xl overflow-hidden bg-black border border-white/10">
@@ -94,16 +159,20 @@ export function PhotoCropModal({ src, onCancel, onConfirm }: Props) {
               image={src}
               crop={crop}
               zoom={zoom}
+              rotation={rotation}
               aspect={PASSPORT_ASPECT}
               onCropChange={setCrop}
               onZoomChange={setZoom}
+              onRotationChange={setRotation}
               onCropComplete={onCropComplete}
               showGrid={false}
             />
           </div>
 
           <div className="flex items-center gap-3 mt-5">
-            <ZoomIn size={16} className="text-theme-soft shrink-0" />
+            <span className="flex items-center gap-1.5 shrink-0 w-16 text-[10px] font-black uppercase tracking-widest text-theme-soft">
+              <ZoomIn size={14} /> Zoom
+            </span>
             <input
               type="range"
               min={1}

@@ -25,7 +25,7 @@ const Header = () => {
   const dashboard = user ? dashboardByRole[user.role] : null;
 
   return (
-    <header className="w-full relative z-[100]">
+    <>
       {/* Premium Top Bar */}
       <div className="bg-theme-dark text-white py-2.5 border-b border-white/5">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 sm:px-6 md:flex-row md:items-center md:justify-between">
@@ -51,7 +51,7 @@ const Header = () => {
       </div>
 
       {/* Main Glassmorphism Navbar */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-100">
+      <div className="sticky top-0 z-[100] bg-white/95 backdrop-blur-xl border-b border-slate-100">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:py-5">
           <div className="flex items-center justify-between gap-8">
             {/* Elite Logo */}
@@ -182,7 +182,7 @@ const Header = () => {
           )}
         </div>
       </div>
-    </header>
+    </>
   );
 };
 

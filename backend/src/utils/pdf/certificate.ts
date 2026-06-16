@@ -317,13 +317,26 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       doc.moveTo(292, 528.1).lineTo(383, 528.1).stroke();
       doc.moveTo(655, 528.1).lineTo(746, 528.1).stroke();
 
+      // Exam Controller (examiner) signature above the left rule (kept small so
+      // it clears the "awarded ... Grade" line above).
+      const examinerSign = loadAsset("examiner-sign.png");
+      if (examinerSign) {
+        try {
+          const sw = 68;
+          const sh = sw * (748 / 1572);
+          doc.image(examinerSign, (292 + 383) / 2 - sw / 2, 527 - sh, { width: sw });
+        } catch {
+          /* optional */
+        }
+      }
+
       // Chairman's signature, centred just above the right rule.
       const chairmanSign = loadAsset("chairman-sign.png");
       if (chairmanSign) {
         try {
-          const sw = 104;
+          const sw = 88;
           const sh = sw * (252 / 658);
-          doc.image(chairmanSign, (655 + 746) / 2 - sw / 2, 528.1 - sh - 1, { width: sw });
+          doc.image(chairmanSign, (655 + 746) / 2 - sw / 2, 527 - sh, { width: sw });
         } catch {
           /* optional */
         }

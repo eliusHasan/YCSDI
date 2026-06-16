@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { qrBuffer, uploadPdf } from "./shared.js";
+import { loadAsset, qrBuffer, uploadPdf } from "./shared.js";
 import {
   DOC_GREEN,
   DOC_INK,
@@ -255,6 +255,20 @@ export async function render(input: MarksheetInput): Promise<Buffer> {
 
       // Verification QR code (bottom left).
       doc.image(qr, 55.5, 725.5, { width: 74.5, height: 74.5 });
+
+      // Signatures, centred just above each rule.
+      const sign = (asset: string, cx: number, w: number, ratio: number) => {
+        const buf = loadAsset(asset);
+        if (!buf) return;
+        try {
+          const h = w * ratio;
+          doc.image(buf, cx - w / 2, 782 - h - 2, { width: w });
+        } catch {
+          /* optional */
+        }
+      };
+      sign("prepared-sign.png", (210 + 352) / 2, 120, 456 / 1885);
+      sign("examiner-sign.png", (430 + 574) / 2, 104, 748 / 1572);
 
       // Signature lines + captions.
       doc.lineWidth(1).strokeColor(DOC_INK);

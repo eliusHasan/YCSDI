@@ -21,6 +21,23 @@
   }
 }
 
+@keyframes notice-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-notice-marquee {
+  animation: notice-marquee 40s linear infinite;
+}
+
+.animate-notice-marquee:hover {
+  animation-play-state: paused;
+}
+
 @layer utilities {
   @media print {
     /* Hide everything by default */
