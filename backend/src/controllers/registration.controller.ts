@@ -56,28 +56,48 @@ export class RegistrationController {
         }
       }
 
-      const count = await Student.countDocuments();
       const year = new Date().getFullYear();
-      const registrationId = `YCSDI-${year}-${(count + 1).toString().padStart(4, "0")}`;
-      const serialNo = await generateSerialNo();
-
-      const newStudent = new Student({
+      const prefix = `YCSDI-${year}-`;
+      const baseFields = {
         ...pickAccepted(req.body ?? {}),
         ...(preferredInstituteId ? { preferredInstituteId } : {}),
         ...(preferredCourseId ? { preferredCourseId } : {}),
         photoUrl: file.path,
-        serialNo,
-        registrationId,
-        status: "pending",
-      });
+        status: "pending" as const,
+      };
 
-      await newStudent.save();
+      // Allocate the next registrationId from the highest existing one for the
+      // year (not the document count, which breaks after deletions), retrying on
+      // a duplicate-key race for registrationId or serialNo.
+      let saved: typeof Student.prototype | null = null;
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < 6 && !saved; attempt += 1) {
+        const latest = await Student.findOne({ registrationId: { $regex: `^${prefix}` } })
+          .sort({ registrationId: -1 })
+          .select("registrationId")
+          .lean();
+        let seq = 1;
+        if (latest?.registrationId) {
+          const parsed = Number.parseInt(latest.registrationId.slice(prefix.length), 10);
+          if (Number.isFinite(parsed)) seq = parsed + 1;
+        }
+        const registrationId = `${prefix}${String(seq).padStart(4, "0")}`;
+        const serialNo = await generateSerialNo();
+        try {
+          saved = await new Student({ ...baseFields, serialNo, registrationId }).save();
+        } catch (err: any) {
+          lastError = err;
+          if (err?.code === 11000) continue; // collision -> recompute and retry
+          throw err;
+        }
+      }
+      if (!saved) throw lastError ?? new Error("Could not allocate a registration id");
 
       res.status(201).json({
         message: "Registration successful! Your application is pending review.",
-        serialNo,
-        registrationId,
-        student: newStudent,
+        serialNo: saved.serialNo,
+        registrationId: saved.registrationId,
+        student: saved,
       });
     } catch (error: any) {
       console.error("Registration Error:", error);
