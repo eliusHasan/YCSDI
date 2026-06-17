@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { PAGE_SIZE, Pagination } from "../../components/ui/Pagination";
 import { courseApi, type Course, type CourseStatus } from "../../services/api";
 
 interface FormState {
@@ -51,6 +52,7 @@ export function AdminCoursesPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     void load();
@@ -163,6 +165,10 @@ export function AdminCoursesPage() {
     }
   };
 
+  const pageCount = Math.max(1, Math.ceil(courses.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pagedCourses = courses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div className="p-6 lg:p-10">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -221,7 +227,7 @@ export function AdminCoursesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {courses.map((course) => (
+                    {pagedCourses.map((course) => (
                       <tr key={course._id} className="hover:bg-white/[0.02] transition-colors group/row">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
@@ -285,6 +291,7 @@ export function AdminCoursesPage() {
                     ))}
                   </tbody>
                 </table>
+                <Pagination page={safePage} total={courses.length} onChange={setPage} />
               </div>
             )}
           </div>

@@ -8,7 +8,7 @@ import { loadAsset } from "./shared.js";
  * reference PDFs for fixed wording; Carlito/Arimo — the metric-compatible OFL
  * clones of Calibri/Arial — for dynamic values).
  */
-export const DOC_INK = "#2C2C34";
+export const DOC_INK = "#000000";
 export const DOC_GREEN = "#144C44";
 export const DOC_WHITE = "#FFFFFF";
 

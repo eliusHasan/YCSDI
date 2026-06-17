@@ -26,6 +26,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
+import { PAGE_SIZE, Pagination } from "../../components/ui/Pagination";
 import {
   adminApi,
   instituteApi,
@@ -96,6 +97,12 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterValue>("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Reset to the first page whenever the filter or search query changes.
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search]);
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -277,9 +284,14 @@ export function AdminDashboard() {
       !q ||
       s.fullName.toLowerCase().includes(q) ||
       s.registrationId.toLowerCase().includes(q) ||
-      s.mobileNumber.toLowerCase().includes(q);
+      s.mobileNumber.toLowerCase().includes(q) ||
+      (s.serialNo ?? "").toLowerCase().includes(q);
     return matchesFilter && matchesSearch;
   });
+
+  const studentPageCount = Math.max(1, Math.ceil(filteredStudents.length / PAGE_SIZE));
+  const studentSafePage = Math.min(page, studentPageCount);
+  const pagedStudents = filteredStudents.slice((studentSafePage - 1) * PAGE_SIZE, studentSafePage * PAGE_SIZE);
 
   if (loading) {
     return (
@@ -309,7 +321,7 @@ export function AdminDashboard() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-theme-soft transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Search students..."
+                placeholder="Search by name, reg ID, mobile, serial..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold focus:outline-none focus:border-theme-soft/50 transition-all w-64"
@@ -354,7 +366,7 @@ export function AdminDashboard() {
                       </td>
                     </tr>
                   ) : (
-                    filteredStudents.map((student) => (
+                    pagedStudents.map((student) => (
                       <tr key={student._id} className="hover:bg-white/[0.02] transition-colors group/row">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
@@ -474,6 +486,7 @@ export function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+            <Pagination page={studentSafePage} total={filteredStudents.length} onChange={setPage} />
           </div>
         </div>
       </div>

@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { PAGE_SIZE, Pagination } from "../../components/ui/Pagination";
 import {
   instituteApi,
   staffApi,
@@ -53,6 +54,7 @@ export function AdminStaffPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   // Password reset modal
   const [pwTarget, setPwTarget] = useState<Staff | null>(null);
@@ -187,6 +189,10 @@ export function AdminStaffPage() {
     }
   };
 
+  const pageCount = Math.max(1, Math.ceil(staff.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pagedStaff = staff.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div className="p-6 lg:p-10">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -250,7 +256,7 @@ export function AdminStaffPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {staff.map((member) => (
+                    {pagedStaff.map((member) => (
                       <tr key={member._id} className="hover:bg-white/[0.02] transition-colors group/row">
                         <td className="px-6 py-4">
                           <p className="text-sm font-black uppercase tracking-wide">{member.fullName}</p>
@@ -322,6 +328,7 @@ export function AdminStaffPage() {
                     ))}
                   </tbody>
                 </table>
+                <Pagination page={safePage} total={staff.length} onChange={setPage} />
               </div>
             )}
           </div>

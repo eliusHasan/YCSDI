@@ -30,7 +30,7 @@ export interface CertificateInput {
  * baseline measured from the top edge. `sx`/`sy` are the horizontal/vertical
  * font scales the artwork uses (several faces are anamorphically squeezed).
  */
-const INK = "#2C2E35";
+const INK = "#000000";
 const GREEN = "#144C44";
 const RED = "#F8281A";
 
@@ -68,7 +68,7 @@ interface TextItem {
 /** Every static text run, verbatim from the reference artwork. */
 const STATIC_TEXT: TextItem[] = [
   { f: "latin", x: 50.76, y: 87.98, sx: 14.486, sy: 64.376, w: 740.1, str: "YOUTH CAREER & SKILLS DEVELOPMENT TRAINING" },
-  { f: "narrow", x: 427.43, y: 173.08, sx: 8.253, sy: 6.854, w: 63.82, str: "www.ycsdi.netlify.app" },
+  { f: "narrow", x: 427.43, y: 178, sx: 8.253, sy: 6.854, w: 63.82, str: "www.ycsdi.netlify.app" },
   { f: "birgine", x: 260.31, y: 197.12, sx: 16.256, sy: 13.5, w: 370.4, str: "Approved By Govt. of The People's Republic of Bangladesh" },
   // "Certificate" heading is drawn separately in render() with the blackletter face.
 
@@ -290,7 +290,7 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       const logo = loadAsset("cert-logo.png");
       if (logo) {
         try {
-          doc.image(logo, 413, 91.5, { width: 92 });
+          doc.image(logo, 417, 91.5, { width: 84 });
         } catch {
           /* optional */
         }

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 export interface SearchableOption {
   value: string;
   label: string;
+  /** Extra text matched by the search box but not shown in the option (e.g. serial no). */
+  keywords?: string;
 }
 
 interface Props {
@@ -45,7 +47,9 @@ export function SearchableSelect({
 
   const selected = options.find((o) => o.value === value) ?? null;
   const q = query.trim().toLowerCase();
-  const filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
+  const filtered = q
+    ? options.filter((o) => `${o.label} ${o.keywords ?? ""}`.toLowerCase().includes(q))
+    : options;
 
   return (
     <div ref={containerRef} className="relative">

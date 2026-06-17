@@ -19,6 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { PAGE_SIZE, Pagination } from "../../components/ui/Pagination";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import {
   adminApi,
@@ -111,7 +112,7 @@ export function AdminDocumentsPage() {
   };
 
   const options = useMemo(
-    () => students.map((s) => ({ value: s._id, label: `${s.registrationId} — ${s.fullName}` })),
+    () => students.map((s) => ({ value: s._id, label: `${s.registrationId} — ${s.fullName}`, keywords: s.serialNo ?? "" })),
     [students],
   );
 
@@ -172,6 +173,7 @@ export function AdminDocumentsPage() {
                   onChange={setStudentId}
                   options={options}
                   placeholder="Pick a student…"
+                  searchPlaceholder="Search by name, reg ID, or serial…"
                   icon={GraduationCap}
                 />
               )}
@@ -545,6 +547,11 @@ function AllDocumentsTab({ allDocs, onChanged }: { allDocs: DocBuckets | null; o
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<DocumentType | "all">("all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filter]);
 
   const rows = useMemo(() => {
     if (!allDocs) return [];
@@ -568,6 +575,10 @@ function AllDocumentsTab({ allDocs, onChanged }: { allDocs: DocBuckets | null; o
         .some((v) => v.toLowerCase().includes(q));
     });
   }, [rows, search, filter]);
+
+  const docPageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const docSafePage = Math.min(page, docPageCount);
+  const pagedDocs = filtered.slice((docSafePage - 1) * PAGE_SIZE, docSafePage * PAGE_SIZE);
 
   const regenerate = async (type: DocumentType, id: string) => {
     setBusyId(id);
@@ -643,7 +654,7 @@ function AllDocumentsTab({ allDocs, onChanged }: { allDocs: DocBuckets | null; o
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filtered.map(({ type, doc }) => {
+                {pagedDocs.map(({ type, doc }) => {
                   const meta = metaFor(type);
                   const stu = isRef<CertificateStudentRef>(doc.studentId) ? doc.studentId : null;
                   const crs = isRef<CertificateCourseRef>(doc.courseId) ? doc.courseId : null;
@@ -695,6 +706,7 @@ function AllDocumentsTab({ allDocs, onChanged }: { allDocs: DocBuckets | null; o
                 })}
               </tbody>
             </table>
+            <Pagination page={docSafePage} total={filtered.length} onChange={setPage} />
           </div>
         )}
       </div>
