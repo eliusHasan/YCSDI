@@ -64,16 +64,17 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
 
   return new Promise((resolve, reject) => {
     try {
-      // The admit card is a compact card (not full A4): the design ends just
-      // below the directions, matching the reference border (which runs y7–y410).
-      const doc = new PDFDocument({ size: [595.28, 417], margin: 0 });
+      // A4 sheet; the admit card design fills the top (y0–417) and the rest of
+      // the page is left blank, matching the reference border (which runs y7–y410).
+      const CARD_H = 417;
+      const doc = new PDFDocument({ size: "A4", layout: "portrait", margin: 0 });
       const chunks: Buffer[] = [];
       doc.on("data", (c: Buffer) => chunks.push(c));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
       const fonts = registerDocFonts(doc);
-      drawDocFrame(doc, "admit-border.png");
+      drawDocFrame(doc, "admit-border.png", CARD_H);
 
       // Header: govt line, title, and a logo vertically centred on the title.
       drawDocHeader(
@@ -82,7 +83,7 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
         { x: 105.72, y: 82.69, size: 32.951, hScale: 8.949 / 32.951, refWidth: 457.2 },
         { x: 107.46, y: 51.47, size: 13.5, hScale: 19.825 / 13.5, refWidth: 451.72 },
       );
-      drawDocLogo(doc, 38, 49, 62);
+      drawDocLogo(doc, 36, 40, 56);
 
       drawBadge(doc, fonts.calibriBold, {
         text: "Admit Card",

@@ -484,6 +484,8 @@ export const staffApi = {
   get: (id: string) => api.get<Staff>(`/admin/staff/${id}`),
   create: (data: StaffCreatePayload) => api.post<Staff>("/admin/staff", data),
   update: (id: string, data: StaffUpdatePayload) => api.patch<Staff>(`/admin/staff/${id}`, data),
+  resetPassword: (id: string, password: string) =>
+    api.post<{ message: string }>(`/admin/staff/${id}/password`, { password }),
   remove: (id: string) => api.delete<{ message: string }>(`/admin/staff/${id}`),
 };
 

@@ -130,6 +130,41 @@ export class StaffController {
     res.status(200).json(staff);
   }
 
+  /** Admin: set a new login password for a staff member (e.g. when they forget it). */
+  static async resetPassword(req: Request, res: Response) {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      res.status(400).json({ message: "Invalid staff id" });
+      return;
+    }
+
+    const { password } = req.body ?? {};
+    if (typeof password !== "string" || password.trim().length < 6) {
+      res.status(400).json({ message: "Password must be at least 6 characters" });
+      return;
+    }
+
+    const staff = await Staff.findById(id);
+    if (!staff) {
+      res.status(404).json({ message: "Staff not found" });
+      return;
+    }
+    if (!staff.userId) {
+      res.status(400).json({ message: "This staff has no login account" });
+      return;
+    }
+
+    const user = await User.findById(staff.userId);
+    if (!user) {
+      res.status(404).json({ message: "Login account not found" });
+      return;
+    }
+
+    user.password = password.trim(); // hashed by the User pre-save hook
+    await user.save();
+    res.status(200).json({ message: "Password updated" });
+  }
+
   static async remove(req: Request, res: Response) {
     const { id } = req.params;
     if (!isValidObjectId(id)) {

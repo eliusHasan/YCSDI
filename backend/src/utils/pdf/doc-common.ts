@@ -135,14 +135,17 @@ export function drawBadge(
 /**
  * White page + ornamental frame (per-document border PNG) + faint centred
  * logo watermark. Content is drawn on top by the caller.
+ *
+ * `designHeight` lets a card occupy only the top of a larger page (e.g. the
+ * admit card sits on an A4 sheet with the lower half left blank): the frame
+ * and watermark span the design height, while the rest of the page stays white.
  */
-export function drawDocFrame(doc: PDFKit.PDFDocument, borderAsset: string): void {
+export function drawDocFrame(doc: PDFKit.PDFDocument, borderAsset: string, designHeight?: number): void {
   const W = doc.page.width;
-  const H = doc.page.height;
-  doc.rect(0, 0, W, H).fill(DOC_WHITE);
+  const H = designHeight ?? doc.page.height;
+  doc.rect(0, 0, W, doc.page.height).fill(DOC_WHITE);
 
-  // Faint logo watermark, centred on the page (the page is the design area —
-  // the admit card uses a compact page, so this lands in the card's middle).
+  // Faint logo watermark, centred within the design area.
   const logo = loadAsset("logo.png");
   if (logo) {
     const wmW = Math.min(270, W * 0.46);

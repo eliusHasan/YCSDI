@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  KeyRound,
   Loader2,
   Lock,
   Mail,
@@ -52,6 +53,13 @@ export function AdminStaffPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
+
+  // Password reset modal
+  const [pwTarget, setPwTarget] = useState<Staff | null>(null);
+  const [pwValue, setPwValue] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwDone, setPwDone] = useState(false);
 
   useEffect(() => {
     void load();
@@ -140,6 +148,32 @@ export function AdminStaffPage() {
       setFormError(err.response?.data?.message ?? "Save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openReset = (member: Staff) => {
+    setPwTarget(member);
+    setPwValue("");
+    setPwError(null);
+    setPwDone(false);
+  };
+
+  const handleReset = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!pwTarget) return;
+    if (pwValue.trim().length < 6) {
+      setPwError("Password must be at least 6 characters");
+      return;
+    }
+    setPwSaving(true);
+    setPwError(null);
+    try {
+      await staffApi.resetPassword(pwTarget._id, pwValue.trim());
+      setPwDone(true);
+    } catch (err: any) {
+      setPwError(err.response?.data?.message ?? "Reset failed");
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -260,6 +294,14 @@ export function AdminStaffPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openReset(member)}
+                              disabled={!member.userId}
+                              className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              title={member.userId ? "Reset password" : "No login account"}
+                            >
+                              <KeyRound size={14} />
+                            </button>
                             <button
                               onClick={() => openEdit(member)}
                               className="p-2 rounded-lg bg-white/5 text-white/60 hover:bg-theme-soft hover:text-theme-dark transition-colors"
@@ -428,6 +470,81 @@ export function AdminStaffPage() {
               </div>
             </form>
           </div>
+          </div>
+        </div>
+      )}
+
+      {pwTarget && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-theme-dark/80 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative w-full max-w-md bg-theme-dark border border-white/10 rounded-[32px] p-8 shadow-2xl my-8">
+              <button
+                onClick={() => setPwTarget(null)}
+                className="absolute top-6 right-6 p-2 rounded-lg text-white/40 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-theme-soft/20 text-theme-soft mb-4">
+                  <KeyRound size={24} />
+                </div>
+                <h3 className="text-xl font-black uppercase tracking-tight">Reset Password</h3>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mt-2">
+                  {pwTarget.fullName} · {pwTarget.userId?.userId ?? "—"}
+                </p>
+              </div>
+
+              {pwDone ? (
+                <div className="space-y-6">
+                  <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-[11px] font-bold uppercase tracking-widest text-center">
+                    Password updated. Share it with the staff member.
+                  </div>
+                  <button
+                    onClick={() => setPwTarget(null)}
+                    className="w-full py-3.5 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleReset} className="space-y-4">
+                  <Field
+                    label="New Password *"
+                    value={pwValue}
+                    onChange={setPwValue}
+                    required
+                    type="text"
+                    icon={Lock}
+                  />
+                  <p className="text-[10px] font-bold text-white/30 ml-1">Minimum 6 characters. Shown so you can copy it.</p>
+
+                  {pwError && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold uppercase tracking-widest text-center">
+                      {pwError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setPwTarget(null)}
+                      className="py-3.5 rounded-xl border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={pwSaving}
+                      className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
+                    >
+                      {pwSaving ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                      Update
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

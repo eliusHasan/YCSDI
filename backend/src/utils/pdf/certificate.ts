@@ -308,8 +308,18 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       doc.lineWidth(1.1).strokeColor(INK);
       doc.roundedRect(59.9, 102.1, 140, 216, 8).stroke();
       doc.roundedRect(59.9, 324.1, 140, 194.8, 8).stroke();
-      // Registrar stamp placeholder inside the incorporation panel (solid in the artwork).
-      doc.rect(74, 239.5, 50, 57.5).fill(INK);
+      // Official incorporation QR (govt registration) in the registrar-stamp slot
+      // of the incorporation panel; falls back to a solid placeholder box.
+      const incorpQr = loadAsset("incorporation-qr.png");
+      if (incorpQr) {
+        try {
+          doc.image(incorpQr, 73, 241, { width: 53, height: 53 });
+        } catch {
+          doc.rect(74, 239.5, 50, 57.5).fill(INK);
+        }
+      } else {
+        doc.rect(74, 239.5, 50, 57.5).fill(INK);
+      }
       // Divider under "Grading Marks".
       doc.lineWidth(1.8).strokeColor(INK).moveTo(93.5, 344.6).lineTo(186, 344.6).stroke();
       // Signature rules.
