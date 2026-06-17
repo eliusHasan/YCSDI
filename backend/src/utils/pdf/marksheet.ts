@@ -286,5 +286,5 @@ export async function render(input: MarksheetInput): Promise<Buffer> {
 
 export async function generateAndUploadMarksheet(input: MarksheetInput): Promise<string> {
   const buffer = await render(input);
-  return uploadPdf(buffer, "ycsdi/marksheets", input.serialNo);
+  return uploadPdf(buffer, "ycsdi/marksheets", `marksheet_${input.serialNo}`);
 }

@@ -96,6 +96,9 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
         radius: 4,
       });
 
+      // Serial No (the student's registration serial, shared across their documents).
+      drawToken(doc, fonts.arial, { x: 38.5, y: 160, size: 11, str: `Serial No: ${input.serialNo}`, color: DOC_INK });
+
       drawLeftRows(doc, fonts, input);
 
       // Right column: photo (borderless, centred over the Roll/Reg boxes), then
@@ -162,5 +165,5 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
 
 export async function generateAndUploadAdmitCard(input: AdmitCardInput): Promise<string> {
   const buffer = await render(input);
-  return uploadPdf(buffer, "ycsdi/admit-cards", input.serialNo);
+  return uploadPdf(buffer, "ycsdi/admit-cards", `admit_card_${input.serialNo}`);
 }

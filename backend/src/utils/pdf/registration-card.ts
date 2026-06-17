@@ -160,5 +160,5 @@ export async function render(input: RegistrationCardInput): Promise<Buffer> {
 
 export async function generateAndUploadRegistrationCard(input: RegistrationCardInput): Promise<string> {
   const buffer = await render(input);
-  return uploadPdf(buffer, "ycsdi/registration-cards", input.serialNo);
+  return uploadPdf(buffer, "ycsdi/registration-cards", `registration_card_${input.serialNo}`);
 }

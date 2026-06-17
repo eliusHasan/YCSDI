@@ -313,7 +313,8 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       const incorpQr = loadAsset("incorporation-qr.png");
       if (incorpQr) {
         try {
-          doc.image(incorpQr, 73, 241, { width: 53, height: 53 });
+          // Half the previous size (53 -> 27), centred in the registrar-stamp slot.
+          doc.image(incorpQr, 86, 254, { width: 27, height: 27 });
         } catch {
           doc.rect(74, 239.5, 50, 57.5).fill(INK);
         }
@@ -352,11 +353,11 @@ export async function render(input: CertificateInput): Promise<Buffer> {
         }
       }
 
-      // QR code, centred in the "Scan for Verification" slot (kept compact).
+      // QR code, centred in the "Scan for Verification" slot (enlarged).
       {
-        const qrSize = 54;
+        const qrSize = 72;
         const qrCenterX = 129.9; // centre of the left panel
-        doc.image(qr, qrCenterX - qrSize / 2, 444, { width: qrSize, height: qrSize });
+        doc.image(qr, qrCenterX - qrSize / 2, 433, { width: qrSize, height: qrSize });
       }
 
       // Static text, verbatim from the artwork.
@@ -407,5 +408,5 @@ export async function render(input: CertificateInput): Promise<Buffer> {
 
 export async function generateAndUploadCertificate(input: CertificateInput): Promise<string> {
   const buffer = await render(input);
-  return uploadPdf(buffer, "ycsdi/certificates", input.serialNo);
+  return uploadPdf(buffer, "ycsdi/certificates", `certificate_${input.serialNo}`);
 }

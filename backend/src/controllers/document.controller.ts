@@ -337,7 +337,15 @@ export class DocumentController {
     }
 
     try {
-      const serialNo: string = existing.serialNo;
+      // Keep every document on the student's shared registration serial, syncing
+      // any older document that still carries a per-document serial.
+      const s = enrollment.studentId;
+      let serialNo = s.serialNo;
+      if (!serialNo) {
+        serialNo = await generateSerialNo();
+        await Student.updateOne({ _id: s._id }, { serialNo });
+      }
+      if (existing.serialNo !== serialNo) existing.serialNo = serialNo;
       const issuedDate: Date = existing.issuedAt ?? new Date();
       const exam: Date = (type === "admit" ? existing.examDate : undefined) ?? issuedDate;
       const certificateNumber = type === "certificate" ? existing.certificateNumber : undefined;
