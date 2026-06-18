@@ -68,7 +68,6 @@ interface TextItem {
 /** Every static text run, verbatim from the reference artwork. */
 const STATIC_TEXT: TextItem[] = [
   { f: "latin", x: 50.76, y: 87.98, sx: 14.486, sy: 64.376, w: 740.1, str: "YOUTH CAREER & SKILLS DEVELOPMENT TRAINING" },
-  { f: "narrow", x: 427.43, y: 178, sx: 8.253, sy: 6.854, w: 63.82, str: "ycsdt.co" },
   { f: "birgine", x: 260.31, y: 197.12, sx: 16.256, sy: 13.5, w: 370.4, str: "Approved By Govt. of The People's Republic of Bangladesh" },
   // "Certificate" heading is drawn separately in render() with the blackletter face.
 
@@ -362,6 +361,17 @@ export async function render(input: CertificateInput): Promise<Buffer> {
 
       // Static text, verbatim from the artwork.
       for (const item of STATIC_TEXT) drawRun(doc, fonts[item.f], item);
+
+      // Website URL, centred under the logo.
+      {
+        const url = "https://ycsdt.co";
+        const size = 6.854;
+        const hScale = 8.253 / size;
+        const logoCenterX = 417 + 84 / 2;
+        doc.font(fonts.narrow).fontSize(size);
+        const w = doc.widthOfString(url) * hScale;
+        drawToken(doc, fonts.narrow, { x: logoCenterX - w / 2, y: 178, sx: size * hScale, sy: size, str: url });
+      }
 
       // "Certificate" heading in the blackletter face (user-specified), centred
       // where the original CERTIFICATE word sat in the artwork.
