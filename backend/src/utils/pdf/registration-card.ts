@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { fetchImageBuffer, qrBuffer, uploadPdf } from "./shared.js";
+import { fetchImageBuffer, loadAsset, qrBuffer, uploadPdf } from "./shared.js";
 import {
   DOC_INK,
   drawBadge,
@@ -138,18 +138,36 @@ export async function render(input: RegistrationCardInput): Promise<Buffer> {
 
       drawBody(doc, fonts, input);
 
-      // Signature lines + captions.
+      // Signature lines + captions (captions centred under each line).
       doc.lineWidth(1).strokeColor(DOC_INK);
       const sigY = 772;
       doc.moveTo(60, sigY).lineTo(180, sigY).stroke();
       doc.moveTo(205, sigY).lineTo(385, sigY).stroke();
       doc.moveTo(445, sigY).lineTo(562, sigY).stroke();
-      const cap = (x: number, y: number, str: string) =>
-        drawToken(doc, fonts.calibriBold, { x, y, size: 10, hScale: 11.613 / 14, str, color: DOC_INK });
-      cap(71.43, 786, "Signature of Student");
-      cap(215.29, 786, "Signature of Head of the institute");
-      cap(452.16, 786, "Deputy Secretary");
-      cap(462.44, 800, "(Registration)");
+
+      // Authority signatures, centred just above their lines.
+      const sign = (asset: string, centerX: number, w: number, ratio: number) => {
+        const buf = loadAsset(asset);
+        if (!buf) return;
+        try {
+          doc.image(buf, centerX - w / 2, sigY - w * ratio - 3, { width: w });
+        } catch {
+          /* optional */
+        }
+      };
+      sign("reg-head-sign.png", (205 + 385) / 2, 132, 438 / 1807);
+      sign("reg-deputy-sign.png", (445 + 562) / 2, 110, 502 / 1735);
+      const capSize = 10;
+      const capScale = 11.613 / 14;
+      const cap = (centerX: number, y: number, str: string) => {
+        doc.font(fonts.calibriBold).fontSize(capSize);
+        const tw = doc.widthOfString(str) * capScale;
+        drawToken(doc, fonts.calibriBold, { x: centerX - tw / 2, y, size: capSize, hScale: capScale, str, color: DOC_INK });
+      };
+      cap((60 + 180) / 2, 786, "Signature of Student");
+      cap((205 + 385) / 2, 786, "Signature of Head of the institute");
+      cap((445 + 562) / 2, 786, "Deputy Secretary");
+      cap((445 + 562) / 2, 800, "(Registration)");
 
       doc.end();
     } catch (err) {

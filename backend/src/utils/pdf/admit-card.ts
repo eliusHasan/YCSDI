@@ -50,7 +50,7 @@ function drawLeftRows(doc: PDFKit.PDFDocument, fonts: DocFonts, input: AdmitCard
     ["Session", input.session],
     ["Subject Name", input.subjectName],
   ];
-  const ys = [174, 194, 214, 234, 254, 274, 294];
+  const ys = [190, 214, 238, 262, 286, 310, 334];
   rows.forEach(([label, value], i) => {
     const y = ys[i];
     drawToken(doc, fonts.calibriBold, { x: LABEL_X, y, size: ROW_SIZE, str: label, color: DOC_INK });
@@ -107,7 +107,7 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
       const photoW = 74;
       const photoH = 66;
       const photoX = boxCenterX - photoW / 2;
-      const photoY = 143;
+      const photoY = 150;
       if (photo) {
         try {
           doc.image(photo, photoX, photoY, { fit: [photoW, photoH], align: "center", valign: "center" });
@@ -120,20 +120,20 @@ export async function render(input: AdmitCardInput): Promise<Buffer> {
 
       const rightLabel = (label: string, y: number) =>
         drawToken(doc, fonts.calibriBold, { x: 439.08, y, size: ROW_SIZE, str: label, color: DOC_INK });
-      rightLabel("Roll No", 223.33);
-      drawToken(doc, fonts.calibriBold, { x: 475.08, y: 223.33, size: ROW_SIZE, str: ":", color: DOC_INK });
-      rightLabel("Reg. No :", 243.33);
-      rightLabel("Sex", 263.33);
-      drawToken(doc, fonts.calibriBold, { x: 475.08, y: 263.33, size: ROW_SIZE, str: ":", color: DOC_INK });
+      rightLabel("Roll No", 238);
+      drawToken(doc, fonts.calibriBold, { x: 475.08, y: 238, size: ROW_SIZE, str: ":", color: DOC_INK });
+      rightLabel("Reg. No :", 262);
+      rightLabel("Sex", 286);
+      drawToken(doc, fonts.calibriBold, { x: 475.08, y: 286, size: ROW_SIZE, str: ":", color: DOC_INK });
 
       // Roll/Reg value boxes.
       doc.lineWidth(1).strokeColor(DOC_INK);
-      doc.rect(481.5, 213, 69.5, 15.5).stroke();
-      doc.rect(481.5, 233, 69.5, 15.5).stroke();
-      drawValue(doc, fonts.calibriBold, input.rollNo, 486, 224.5, 60);
-      drawValue(doc, fonts.calibriBold, input.registrationNo, 486, 244.5, 60);
+      doc.rect(481.5, 228, 69.5, 15.5).stroke();
+      doc.rect(481.5, 252, 69.5, 15.5).stroke();
+      drawValue(doc, fonts.calibriBold, input.rollNo, 486, 239.5, 60);
+      drawValue(doc, fonts.calibriBold, input.registrationNo, 486, 263.5, 60);
       const sex = input.sex ? input.sex.charAt(0).toUpperCase() + input.sex.slice(1).toLowerCase() : "";
-      drawValue(doc, fonts.calibriBold, sex, 481, 263.33, 90);
+      drawValue(doc, fonts.calibriBold, sex, 481, 286, 90);
 
       // Directions (Arial Narrow).
       const dir = (str: string, y: number) =>
