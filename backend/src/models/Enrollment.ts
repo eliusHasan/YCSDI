@@ -158,13 +158,31 @@ export function computeResult(rawSubjects: SubjectMarkInput[]): {
 export const GRADING_SYSTEM = GRADE_BANDS;
 
 /**
- * Generates the next sequential numeric roll/registration numbers across all
- * enrollments. Both start from a fixed base so they look like the references
- * (4-6 digit numbers) and are guaranteed unique by the schema indexes.
+ * Generates the next sequential numeric roll/registration numbers from the
+ * current maximum, not the document count, so deleted/replaced records do not
+ * cause new duplicate numbers.
  */
+export async function generateRollAndRegistrationSequence(count = 1): Promise<Array<{ rollNo: string; registrationNo: string }>> {
+  const [latestRoll, latestRegistration] = await Promise.all([
+    Enrollment.aggregate<{ max: number }>([
+      { $match: { rollNo: { $regex: /^\d+$/ } } },
+      { $group: { _id: null, max: { $max: { $toInt: "$rollNo" } } } },
+    ]),
+    Enrollment.aggregate<{ max: number }>([
+      { $match: { registrationNo: { $regex: /^\d+$/ } } },
+      { $group: { _id: null, max: { $max: { $toInt: "$registrationNo" } } } },
+    ]),
+  ]);
+  const startRoll = Math.max(1000, latestRoll[0]?.max ?? 1000);
+  const startRegistration = Math.max(100000, latestRegistration[0]?.max ?? 100000);
+
+  return Array.from({ length: count }, (_, i) => ({
+    rollNo: (startRoll + i + 1).toString(),
+    registrationNo: (startRegistration + i + 1).toString(),
+  }));
+}
+
 export async function generateRollAndRegistration(): Promise<{ rollNo: string; registrationNo: string }> {
-  const count = await Enrollment.countDocuments();
-  const rollNo = (1000 + count + 1).toString();
-  const registrationNo = (100000 + count + 1).toString();
-  return { rollNo, registrationNo };
+  const [next] = await generateRollAndRegistrationSequence(1);
+  return next;
 }

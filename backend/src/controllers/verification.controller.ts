@@ -166,14 +166,23 @@ export class VerificationController {
         return;
       }
     } else if (roll && reg) {
-      enrollment = await Enrollment.findOne({ rollNo: roll, registrationNo: reg })
+      const matches = await Enrollment.find({ rollNo: roll, registrationNo: reg })
         .populate(STUDENT)
         .populate(COURSE)
-        .populate(INSTITUTE);
-      if (!enrollment) {
+        .populate(INSTITUTE)
+        .sort({ enrolledAt: -1 });
+      if (matches.length === 0) {
         res.status(404).json({ message: "No record found for the given roll and registration number" });
         return;
       }
+      for (const match of matches) {
+        const hasMarksheet = await Marksheet.exists({ enrollmentId: match._id });
+        if (hasMarksheet || match.result?.published) {
+          enrollment = match;
+          break;
+        }
+      }
+      enrollment = enrollment ?? matches[0];
     } else {
       res.status(400).json({ message: "Provide roll + registration number, or an NID / passport number" });
       return;

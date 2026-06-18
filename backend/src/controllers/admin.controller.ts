@@ -5,7 +5,7 @@ import { Certificate } from "../models/Certificate.js";
 import { Course } from "../models/Course.js";
 import { Marksheet } from "../models/Marksheet.js";
 import { RegistrationCard } from "../models/RegistrationCard.js";
-import { Enrollment } from "../models/Enrollment.js";
+import { Enrollment, generateRollAndRegistrationSequence } from "../models/Enrollment.js";
 import { Institute } from "../models/Institute.js";
 import { Student } from "../models/Student.js";
 import { User } from "../models/User.js";
@@ -116,7 +116,7 @@ export class AdminController {
       await student.save();
 
       // Allocate unique roll & registration numbers per enrollment.
-      const baseCount = await Enrollment.countDocuments();
+      const nextNumbers = await generateRollAndRegistrationSequence((enrollments as ApprovalEnrollmentInput[]).length);
       const enrollmentDocs = await Enrollment.insertMany(
         (enrollments as ApprovalEnrollmentInput[]).map((e, i) => {
           const course = courseById.get(e.courseId)!;
@@ -128,8 +128,8 @@ export class AdminController {
             courseTitle: course.title,
             courseDuration: isPreferredCourse && student.courseDuration ? student.courseDuration : course.duration,
             session: e.session ?? session ?? student.session ?? undefined,
-            rollNo: (1000 + baseCount + i + 1).toString(),
-            registrationNo: (100000 + baseCount + i + 1).toString(),
+            rollNo: nextNumbers[i].rollNo,
+            registrationNo: nextNumbers[i].registrationNo,
           };
         }),
       );
