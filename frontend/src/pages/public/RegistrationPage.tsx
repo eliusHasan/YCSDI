@@ -420,10 +420,11 @@ export function RegistrationPage() {
                       value={district}
                       onChange={handleDistrictChange}
                       options={districtOptions}
-                      placeholder="Select district"
-                      searchPlaceholder="Search district…"
+                      placeholder="Select or type district"
+                      searchPlaceholder="Search or type district…"
                       emptyText="No districts found"
                       icon={MapPin}
+                      allowCustom
                     />
                   </div>
 
@@ -434,10 +435,11 @@ export function RegistrationPage() {
                       value={upazilla}
                       onChange={setUpazilla}
                       options={upazillaOptions}
-                      placeholder={district ? "Select upazilla" : "Select a district first"}
-                      searchPlaceholder="Search upazilla…"
-                      emptyText={district ? "No upazillas found" : "Select a district first"}
+                      placeholder={district ? "Select or type upazilla" : "Select or type a district first"}
+                      searchPlaceholder="Search or type upazilla…"
+                      emptyText={district ? "No upazillas found" : "Type to add an upazilla"}
                       icon={MapPin}
+                      allowCustom
                     />
                   </div>
 

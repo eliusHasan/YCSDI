@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
 export interface SearchableOption {
@@ -18,6 +18,8 @@ interface Props {
   searchPlaceholder?: string;
   emptyText?: string;
   icon?: ComponentType<{ size?: number; className?: string }>;
+  /** Allow entering a value that isn't in the option list (free text). */
+  allowCustom?: boolean;
 }
 
 export function SearchableSelect({
@@ -29,6 +31,7 @@ export function SearchableSelect({
   searchPlaceholder = "Type to search…",
   emptyText = "No matches found",
   icon: Icon,
+  allowCustom = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -46,10 +49,16 @@ export function SearchableSelect({
   }, [open]);
 
   const selected = options.find((o) => o.value === value) ?? null;
+  // Free-text value typed by the user that isn't one of the predefined options.
+  const customLabel = !selected && allowCustom && value ? value : "";
   const q = query.trim().toLowerCase();
   const filtered = q
     ? options.filter((o) => `${o.label} ${o.keywords ?? ""}`.toLowerCase().includes(q))
     : options;
+  const showCustomEntry =
+    allowCustom &&
+    query.trim().length > 0 &&
+    !options.some((o) => o.label.toLowerCase() === q || o.value.toLowerCase() === q);
 
   return (
     <div ref={containerRef} className="relative">
@@ -61,8 +70,8 @@ export function SearchableSelect({
         className="w-full flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl pl-4 pr-3 py-3 text-sm font-bold focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all cursor-pointer text-left"
       >
         {Icon && <Icon size={16} className="text-white/20 shrink-0" />}
-        <span className={`flex-1 truncate ${selected ? "text-white" : "text-white/30"}`}>
-          {selected ? selected.label : placeholder}
+        <span className={`flex-1 truncate ${selected || customLabel ? "text-white" : "text-white/30"}`}>
+          {selected ? selected.label : customLabel || placeholder}
         </span>
         <ChevronDown
           size={16}
@@ -84,7 +93,23 @@ export function SearchableSelect({
             />
           </div>
           <div className="max-h-56 overflow-y-auto py-1">
-            {filtered.length === 0 ? (
+            {showCustomEntry && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(query.trim());
+                  setOpen(false);
+                  setQuery("");
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm font-bold text-theme-soft hover:bg-white/5 transition-colors"
+              >
+                <Plus size={14} className="shrink-0" />
+                <span className="flex-1 truncate">
+                  Use “{query.trim()}”
+                </span>
+              </button>
+            )}
+            {filtered.length === 0 && !showCustomEntry ? (
               <p className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-white/30">
                 {emptyText}
               </p>
