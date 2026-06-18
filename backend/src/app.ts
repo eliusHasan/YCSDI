@@ -24,10 +24,20 @@ export function createApp() {
 
   app.use(helmet());
   app.use(compression());
-  const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
+  // Production origins (custom domain + Netlify) are always allowed so a new
+  // domain works without an env change; CORS_ORIGIN can add more.
+  const ALWAYS_ALLOWED = [
+    "https://ycsdt.co",
+    "https://www.ycsdt.co",
+    "https://ycsdi.netlify.app",
+  ];
+  const allowedOrigins = [
+    ...ALWAYS_ALLOWED,
+    ...(process.env.CORS_ORIGIN ?? "http://localhost:5173")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
+  ];
   const netlifyPreviewHosts = allowedOrigins
     .map((o) => {
       try {
