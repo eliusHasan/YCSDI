@@ -20,7 +20,7 @@ const admitCardSchema = new Schema<IAdmitCard>(
     studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true, index: true },
     courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true, index: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute", required: true, index: true },
-    serialNo: { type: String, required: true, unique: true, index: true },
+    serialNo: { type: String, required: true, index: true },
     examDate: { type: Date },
     issuedByAdminId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     issuedAt: { type: Date, default: () => new Date() },

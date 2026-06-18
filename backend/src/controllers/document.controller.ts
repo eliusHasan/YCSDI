@@ -280,6 +280,10 @@ export class DocumentController {
       else if (type === "marksheet") doc = await Marksheet.create({ ...base, ...built.marksheet });
       else doc = await Certificate.create({ ...base, certificateNumber, ...built.certificate });
 
+      if (type === "marksheet") {
+        await Enrollment.updateOne({ _id: enrollment._id }, { "result.published": true });
+      }
+
       res.status(201).json(await DocumentController.populateOne(type, doc._id));
     } catch (error) {
       console.error(`Failed to issue ${type}:`, error);
@@ -362,6 +366,10 @@ export class DocumentController {
       if (type === "marksheet" && built.marksheet) Object.assign(existing, built.marksheet);
       if (type === "certificate" && built.certificate) Object.assign(existing, built.certificate);
       await existing.save();
+
+      if (type === "marksheet") {
+        await Enrollment.updateOne({ _id: enrollment._id }, { "result.published": true });
+      }
 
       res.status(200).json(await DocumentController.populateOne(type, existing._id));
     } catch (error) {

@@ -44,7 +44,7 @@ const marksheetSchema = new Schema<IMarksheet>(
     studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true, index: true },
     courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true, index: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute", required: true, index: true },
-    serialNo: { type: String, required: true, unique: true, index: true },
+    serialNo: { type: String, required: true, index: true },
     subjects: { type: [marksheetSubjectSchema], required: true },
     totalFull: { type: Number, required: true },
     totalObtained: { type: Number, required: true },

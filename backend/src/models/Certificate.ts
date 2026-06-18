@@ -23,7 +23,7 @@ const certificateSchema = new Schema<ICertificate>(
     courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true, index: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute", required: true, index: true },
     certificateNumber: { type: String, required: true, unique: true, index: true },
-    serialNo: { type: String, required: true, unique: true, index: true },
+    serialNo: { type: String, required: true, index: true },
     cgpa: { type: Number, min: 0, max: 4 },
     letterGrade: { type: String, trim: true },
     issuedByAdminId: { type: Schema.Types.ObjectId, ref: "User", required: true },
