@@ -29,6 +29,8 @@ const MODEL_BY_TYPE: Record<DocType, Model<any>> = {
 
 interface PopulatedEnrollment {
   _id: unknown;
+  courseTitle?: string;
+  courseDuration?: string;
   session?: string;
   rollNo?: string;
   registrationNo?: string;
@@ -50,6 +52,8 @@ interface PopulatedEnrollment {
     postOffice: string;
     upazilla: string;
     district: string;
+    courseDuration?: string;
+    session?: string;
     photoUrl?: string;
     serialNo?: string;
   };
@@ -58,7 +62,7 @@ interface PopulatedEnrollment {
 }
 
 const STUDENT_FIELDS =
-  "fullName fatherName motherName gender dateOfBirth postOffice upazilla district photoUrl serialNo";
+  "fullName fatherName motherName gender dateOfBirth postOffice upazilla district courseDuration session photoUrl serialNo";
 
 function populateEnrollment(query: ReturnType<typeof Enrollment.findById>) {
   return query
@@ -397,6 +401,8 @@ export class DocumentController {
   }> {
     const s = enrollment.studentId;
     const { rollNo, registrationNo } = ctx;
+    const courseTitle = enrollment.courseTitle ?? enrollment.courseId.title;
+    const courseDuration = enrollment.courseDuration ?? s.courseDuration ?? enrollment.courseId.duration ?? "";
 
     if (type === "registration") {
       const pdfUrl = await generateAndUploadRegistrationCard({
@@ -409,12 +415,12 @@ export class DocumentController {
         postOffice: s.postOffice,
         upazilla: s.upazilla,
         district: s.district,
-        courseTitle: enrollment.courseId.title,
+        courseTitle,
         courseCode: enrollment.courseId.category ?? "",
-        courseDuration: enrollment.courseId.duration ?? "",
+        courseDuration,
         registrationNo,
         rollNo,
-        session: enrollment.session ?? "",
+        session: enrollment.session ?? s.session ?? "",
         photoUrl: s.photoUrl,
       });
       return { pdfUrl };
@@ -428,8 +434,8 @@ export class DocumentController {
         fatherName: s.fatherName,
         motherName: s.motherName,
         dateOfBirth: new Date(s.dateOfBirth),
-        session: enrollment.session ?? "",
-        subjectName: enrollment.courseId.title,
+        session: enrollment.session ?? s.session ?? "",
+        subjectName: courseTitle,
         rollNo,
         registrationNo,
         sex: s.gender,
@@ -457,9 +463,9 @@ export class DocumentController {
         rollNo,
         registrationNo,
         instituteName: enrollment.instituteId.name,
-        courseTitle: enrollment.courseId.title,
-        courseDuration: enrollment.courseId.duration ?? "",
-        session: enrollment.session ?? "",
+        courseTitle,
+        courseDuration,
+        session: enrollment.session ?? s.session ?? "",
         subjects,
         totalFull,
         totalObtained,
@@ -481,16 +487,16 @@ export class DocumentController {
       fatherName: s.fatherName,
       motherName: s.motherName,
       instituteName: enrollment.instituteId.name,
-      courseTitle: enrollment.courseId.title,
+      courseTitle,
       rollNo,
       registrationNo,
-      session: enrollment.session ?? "",
+      session: enrollment.session ?? s.session ?? "",
       cgpa: r.cgpa,
       letterGrade: r.letterGrade,
       examDate: ctx.exam,
       issuedDate: ctx.issuedDate,
       centerCode: enrollment.instituteId.code,
-      courseDuration: enrollment.courseId.duration,
+      courseDuration,
     });
     return { pdfUrl, certificate: { cgpa: r.cgpa, letterGrade: r.letterGrade } };
   }

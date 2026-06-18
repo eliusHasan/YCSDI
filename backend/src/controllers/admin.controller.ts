@@ -94,11 +94,12 @@ export class AdminController {
       return;
     }
 
-    const foundCourses = await Course.countDocuments({ _id: { $in: courseIds } });
-    if (foundCourses !== courseIds.length) {
+    const courses = await Course.find({ _id: { $in: courseIds } }).select("title duration");
+    if (courses.length !== courseIds.length) {
       res.status(400).json({ message: "One or more courses not found" });
       return;
     }
+    const courseById = new Map(courses.map((course) => [course._id.toString(), course]));
 
     const existingUser = await User.findOne({ userId });
     if (existingUser) {
@@ -117,14 +118,20 @@ export class AdminController {
       // Allocate unique roll & registration numbers per enrollment.
       const baseCount = await Enrollment.countDocuments();
       const enrollmentDocs = await Enrollment.insertMany(
-        (enrollments as ApprovalEnrollmentInput[]).map((e, i) => ({
-          studentId: student._id,
-          courseId: e.courseId,
-          instituteId: institute._id,
-          session: e.session ?? session ?? undefined,
-          rollNo: (1000 + baseCount + i + 1).toString(),
-          registrationNo: (100000 + baseCount + i + 1).toString(),
-        })),
+        (enrollments as ApprovalEnrollmentInput[]).map((e, i) => {
+          const course = courseById.get(e.courseId)!;
+          const isPreferredCourse = student.preferredCourseId?.toString() === e.courseId;
+          return {
+            studentId: student._id,
+            courseId: e.courseId,
+            instituteId: institute._id,
+            courseTitle: course.title,
+            courseDuration: isPreferredCourse && student.courseDuration ? student.courseDuration : course.duration,
+            session: e.session ?? session ?? student.session ?? undefined,
+            rollNo: (1000 + baseCount + i + 1).toString(),
+            registrationNo: (100000 + baseCount + i + 1).toString(),
+          };
+        }),
       );
 
       const populated = await Student.findById(student._id)

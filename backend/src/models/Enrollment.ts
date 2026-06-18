@@ -23,6 +23,8 @@ export interface IEnrollment extends Document {
   studentId: Types.ObjectId;
   courseId: Types.ObjectId;
   instituteId: Types.ObjectId;
+  courseTitle?: string;
+  courseDuration?: string;
   session?: string;
   rollNo?: string;
   registrationNo?: string;
@@ -62,6 +64,8 @@ const enrollmentSchema = new Schema<IEnrollment>(
     studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true, index: true },
     courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true, index: true },
     instituteId: { type: Schema.Types.ObjectId, ref: "Institute", required: true, index: true },
+    courseTitle: { type: String, trim: true },
+    courseDuration: { type: String, trim: true },
     session: { type: String, trim: true },
     rollNo: { type: String, trim: true, index: true },
     registrationNo: { type: String, trim: true, index: true },

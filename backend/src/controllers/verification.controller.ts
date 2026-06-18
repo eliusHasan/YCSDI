@@ -11,6 +11,20 @@ const STUDENT = { path: "studentId", select: "fullName fatherName motherName reg
 const COURSE = { path: "courseId", select: "title slug duration category" };
 const INSTITUTE = { path: "instituteId", select: "name code" };
 
+function publicCourse(enrollment: HydratedDocument<IEnrollment>) {
+  const course = enrollment.courseId as unknown as {
+    toObject?: () => Record<string, unknown>;
+    title?: string;
+    duration?: string;
+  };
+  const base = typeof course?.toObject === "function" ? course.toObject() : course;
+  return {
+    ...base,
+    title: enrollment.courseTitle ?? base?.title,
+    duration: enrollment.courseDuration ?? base?.duration,
+  };
+}
+
 const VERIFY_SOURCES: Array<{ type: string; label: string; model: Model<unknown> }> = [
   { type: "registration", label: "Registration Card", model: RegistrationCard as unknown as Model<unknown> },
   { type: "admit", label: "Admit Card", model: AdmitCard as unknown as Model<unknown> },
@@ -184,7 +198,7 @@ export class VerificationController {
 
     res.status(200).json({
       student: enrollment.studentId,
-      course: enrollment.courseId,
+      course: publicCourse(enrollment),
       institute: enrollment.instituteId,
       rollNo: enrollment.rollNo,
       registrationNo: enrollment.registrationNo,

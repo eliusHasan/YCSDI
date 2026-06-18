@@ -9,7 +9,7 @@ export const BRAND = {
   shortName: "YCSDI",
   govtLine: "Approved By Govt. of the People's Republic of Bangladesh",
   regLine: "GOVT. REGISTERED ACADEMY · REG NO 158451",
-  website: "www.ycsdi.com.bd",
+  website: "ycsdt.co",
 } as const;
 
 /** Colour palette mirroring the reference documents (navy + gold). */
@@ -49,8 +49,8 @@ export function loadAsset(fileName: string): Buffer | null {
 
 /** Base URL of the public web app, used to build QR verification links. */
 export function publicWebUrl(): string {
-  const fromEnv = process.env.PUBLIC_WEB_URL ?? process.env.CORS_ORIGIN?.split(",")[0]?.trim();
-  return (fromEnv || "http://localhost:5173").replace(/\/$/, "");
+  const fromEnv = process.env.PUBLIC_WEB_URL?.trim();
+  return (fromEnv || "https://ycsdt.co").replace(/\/$/, "");
 }
 
 export function verifyUrl(serialNo: string): string {

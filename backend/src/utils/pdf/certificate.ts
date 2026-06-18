@@ -68,7 +68,7 @@ interface TextItem {
 /** Every static text run, verbatim from the reference artwork. */
 const STATIC_TEXT: TextItem[] = [
   { f: "latin", x: 50.76, y: 87.98, sx: 14.486, sy: 64.376, w: 740.1, str: "YOUTH CAREER & SKILLS DEVELOPMENT TRAINING" },
-  { f: "narrow", x: 427.43, y: 178, sx: 8.253, sy: 6.854, w: 63.82, str: "www.ycsdi.netlify.app" },
+  { f: "narrow", x: 427.43, y: 178, sx: 8.253, sy: 6.854, w: 63.82, str: "ycsdt.co" },
   { f: "birgine", x: 260.31, y: 197.12, sx: 16.256, sy: 13.5, w: 370.4, str: "Approved By Govt. of The People's Republic of Bangladesh" },
   // "Certificate" heading is drawn separately in render() with the blackletter face.
 
@@ -392,8 +392,8 @@ export async function render(input: CertificateInput): Promise<Buffer> {
       drawValue(doc, sc, input.studentName, lineSpans[3][0], 305.55);
       drawValue(doc, sc, input.fatherName, lineSpans[4][0], 330.34);
       drawValue(doc, sc, input.motherName, lineSpans[5][0], 355.13);
-      drawValue(doc, sc, formatExamDate(input.examDate), lineSpans[6][0], 379.91);
-      drawValue(doc, sc, input.courseDuration || input.courseTitle, lineSpans[7][0], 404.7);
+      drawValue(doc, sc, input.courseTitle, lineSpans[6][0], 379.91);
+      drawValue(doc, sc, input.courseDuration ?? "", lineSpans[7][0], 404.7);
       drawValue(doc, sc, input.instituteName, lineSpans[8][0], 429.49);
       drawValue(doc, sc, input.centerCode ?? "", lineSpans[8][1], 429.55);
       drawValue(doc, sc, input.session, lineSpans[9][0], 454.27);
