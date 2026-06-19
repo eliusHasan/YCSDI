@@ -98,14 +98,14 @@ export function VerifyPage() {
                     aria-hidden="true"
                     className="pointer-events-none select-none absolute left-1/2 top-1/2 w-2/3 max-w-sm -translate-x-1/2 -translate-y-1/2 opacity-[0.05]"
                   />
-                  <div className="relative grid gap-8 md:grid-cols-[170px_1fr] md:items-start">
-                    <div className="mx-auto md:mx-0">
-                      <div className="h-[170px] w-[170px] overflow-hidden rounded-3xl border-4 border-slate-50 bg-slate-100 shadow-inner">
+                  <div className="relative grid gap-8 md:grid-cols-[150px_1fr] md:items-start">
+                    <div className="mx-auto w-32 md:mx-0">
+                      <div className="aspect-[35/45] w-full overflow-hidden rounded-2xl border-4 border-slate-50 bg-slate-100 shadow-inner">
                         {data.student.photoUrl ? (
                           <img src={data.student.photoUrl} alt={data.student.fullName} className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-slate-300">
-                            <User size={48} />
+                            <User size={40} />
                           </div>
                         )}
                       </div>
