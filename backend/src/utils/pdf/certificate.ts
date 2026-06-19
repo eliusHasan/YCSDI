@@ -364,13 +364,13 @@ export async function render(input: CertificateInput): Promise<Buffer> {
 
       // Website URL, centred under the logo.
       {
-        const url = "https://ycsdt.co";
+        const url = "www.ycsdt.co";
         const size = 6.854;
         const hScale = 8.253 / size;
         const logoCenterX = 417 + 84 / 2;
-        doc.font(fonts.narrow).fontSize(size);
+        doc.font(fonts.myriad).fontSize(size);
         const w = doc.widthOfString(url) * hScale;
-        drawToken(doc, fonts.narrow, { x: logoCenterX - w / 2, y: 178, sx: size * hScale, sy: size, str: url });
+        drawToken(doc, fonts.myriad, { x: logoCenterX - w / 2, y: 178, sx: size * hScale, sy: size, str: url });
       }
 
       // "Certificate" heading in the blackletter face (user-specified), centred
