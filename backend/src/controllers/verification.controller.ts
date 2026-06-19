@@ -62,7 +62,8 @@ export class VerificationController {
     );
     if (student) {
       const documents = await VerificationController.collectDocuments({ studentId: student._id });
-      res.status(200).json({ found: true, student, documents });
+      const result = await VerificationController.studentResult(student._id);
+      res.status(200).json({ found: true, student, documents, result });
       return;
     }
 
@@ -102,6 +103,41 @@ export class VerificationController {
       }
     }
     res.status(404).json({ found: false, message: "No document found for this serial number" });
+  }
+
+  /** The student's published transcript (most recent enrolment with marks), or null. */
+  private static async studentResult(studentId: unknown) {
+    const enrollments = await Enrollment.find({ studentId })
+      .populate(STUDENT)
+      .populate(COURSE)
+      .populate(INSTITUTE)
+      .sort({ enrolledAt: -1 });
+    for (const e of enrollments) {
+      const marksheet = await Marksheet.findOne({ enrollmentId: e._id });
+      if (marksheet || e.result?.published) {
+        const result = marksheet
+          ? {
+              subjects: marksheet.subjects,
+              totalFull: marksheet.totalFull,
+              totalObtained: marksheet.totalObtained,
+              letterGrade: marksheet.letterGrade,
+              cgpa: marksheet.cgpa,
+            }
+          : e.result;
+        return {
+          student: e.studentId,
+          course: publicCourse(e),
+          institute: e.instituteId,
+          rollNo: e.rollNo,
+          registrationNo: e.registrationNo,
+          session: e.session,
+          result,
+          marksheetUrl: marksheet?.pdfUrl ?? null,
+          serialNo: marksheet?.serialNo ?? null,
+        };
+      }
+    }
+    return null;
   }
 
   /** Gather every issued document matching a filter, with course/institute populated. */

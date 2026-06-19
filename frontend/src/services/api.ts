@@ -444,6 +444,8 @@ export interface VerifyResponse {
     photoUrl?: string;
   } & Record<string, unknown>;
   documents?: VerifiedDocument[];
+  /** The student's published academic result, when available. */
+  result?: PublicResultResponse | null;
   message?: string;
 }
 

@@ -1,14 +1,7 @@
-import { BadgeCheck, ExternalLink, Loader2, Search, ShieldCheck, ShieldX } from "lucide-react";
+import { BadgeCheck, Loader2, Search, ShieldCheck, ShieldX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { publicVerifyApi, type VerifyResponse } from "../../services/api";
-
-function refName(value: unknown, key: string): string {
-  if (value && typeof value === "object" && key in (value as Record<string, unknown>)) {
-    return String((value as Record<string, unknown>)[key]);
-  }
-  return "—";
-}
 
 export function VerifyPage() {
   const { serial: serialParam } = useParams();
@@ -28,7 +21,7 @@ export function VerifyPage() {
       setResult(data);
     } catch (e: any) {
       if (e.response?.status === 404)
-        setResult({ found: false, message: "No documents found for this serial number" });
+        setResult({ found: false, message: "No record found for this serial number" });
       else setError(e.response?.data?.message ?? "Verification failed");
     } finally {
       setLoading(false);
@@ -46,8 +39,8 @@ export function VerifyPage() {
     if (serial.trim() === serialParam) void lookup(serial);
   };
 
-  const student = result?.student;
-  const documents = result?.documents ?? [];
+  const data = result?.result;
+  const studentName = result?.student?.fullName;
 
   return (
     <main className="bg-[#F9FBFC] min-h-screen">
@@ -55,10 +48,10 @@ export function VerifyPage() {
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#E2B26A 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
         <div className="relative mx-auto max-w-3xl px-4 sm:px-6 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-theme-soft text-[10px] font-black uppercase tracking-widest mb-6">
-            <ShieldCheck size={14} /> Document Verification
+            <ShieldCheck size={14} /> Result Verification
           </div>
           <h1 className="text-[clamp(32px,5vw,48px)] font-black text-white leading-tight mb-8">
-            Verify a document by <span className="text-theme-soft italic">serial number.</span>
+            Verify a result by <span className="text-theme-soft italic">serial number.</span>
           </h1>
           <form onSubmit={onSubmit} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
             <input
@@ -89,59 +82,49 @@ export function VerifyPage() {
           )}
 
           {result && !loading && (
-            result.found && student ? (
-              <div className="bg-white rounded-[32px] shadow-[0_40px_100px_rgba(27,60,83,0.12)] border border-slate-100 overflow-hidden">
+            result.found && data ? (
+              <div className="relative bg-white rounded-[32px] shadow-[0_40px_100px_rgba(27,60,83,0.12)] border border-slate-100 overflow-hidden">
                 <div className="bg-emerald-500 px-8 py-5 flex items-center gap-3 text-white">
                   <BadgeCheck size={24} />
                   <div>
-                    <p className="font-black uppercase tracking-tight">Authentic — {refName(student, "fullName")}</p>
+                    <p className="font-black uppercase tracking-tight">Authentic — {data.student.fullName}</p>
                     <p className="text-[11px] font-bold uppercase tracking-widest text-white/80">Serial {serial.trim() || serialParam}</p>
                   </div>
                 </div>
-                <div className="p-8 grid sm:grid-cols-2 gap-x-10 gap-y-5 border-b border-slate-100">
-                  <Field label="Student" value={refName(student, "fullName")} />
-                  <Field label="Registration ID" value={refName(student, "registrationId")} />
-                  <Field label="Father's Name" value={refName(student, "fatherName")} />
-                  <Field label="Mother's Name" value={refName(student, "motherName")} />
+                <div className="relative px-8 py-10 sm:px-12">
+                  <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none select-none absolute left-1/2 top-1/2 w-2/3 max-w-sm -translate-x-1/2 -translate-y-1/2 opacity-[0.05]"
+                  />
+                  <div className="relative space-y-3.5">
+                    <Row label="Name of the student" value={data.student.fullName} />
+                    <Row label="Roll No" value={data.rollNo} />
+                    <Row label="Registration No" value={data.registrationNo} />
+                    <Row label="Institution" value={data.institute.name} />
+                    <Row label="Course Name" value={data.course.title} />
+                    <Row label="Course Duration" value={data.course.duration ?? "—"} />
+                    <Row label="Session" value={data.session ?? "—"} />
+                    <Row label="Final GPA" value={data.result?.cgpa != null ? data.result.cgpa.toFixed(2) : "—"} />
+                  </div>
                 </div>
-                <div className="p-8">
-                  <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-4">
-                    Issued Documents ({documents.length})
-                  </p>
-                  {documents.length === 0 ? (
-                    <p className="text-slate-400 text-sm font-medium">No documents have been issued for this student yet.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {documents.map((d) => (
-                        <div
-                          key={`${d.type}-${d.serialNo}`}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 px-5 py-4"
-                        >
-                          <div>
-                            <p className="text-sm font-black text-theme-dark">{d.label}</p>
-                            <p className="text-[11px] font-bold text-slate-400">
-                              {refName(d.course, "title")} · Issued {new Date(d.issuedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <a
-                            href={d.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-theme-dark text-theme-soft font-black px-5 py-2.5 rounded-xl text-[11px] uppercase tracking-widest hover:bg-theme-accent hover:text-white transition-all"
-                          >
-                            <ExternalLink size={14} /> View PDF
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              </div>
+            ) : result.found ? (
+              <div className="bg-white rounded-[32px] p-12 shadow-xl border border-slate-100 text-center">
+                <ShieldCheck className="text-emerald-500 mx-auto mb-4" size={40} />
+                <p className="text-theme-dark font-black uppercase tracking-widest">
+                  Verified{studentName ? ` — ${studentName}` : ""}
+                </p>
+                <p className="text-slate-400 text-sm font-medium mt-2">
+                  No published result is available for this serial number yet.
+                </p>
               </div>
             ) : (
               <div className="bg-white rounded-[32px] p-12 shadow-xl border border-slate-100 text-center">
                 <ShieldX className="text-red-400 mx-auto mb-4" size={40} />
                 <p className="text-theme-dark font-black uppercase tracking-widest">Not Found</p>
-                <p className="text-slate-400 text-sm font-medium mt-2">{result.message ?? "No documents match this serial number."}</p>
+                <p className="text-slate-400 text-sm font-medium mt-2">{result.message ?? "No record matches this serial number."}</p>
               </div>
             )
           )}
@@ -151,11 +134,12 @@ export function VerifyPage() {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">{label}</p>
-      <p className="text-base font-black text-theme-dark">{value}</p>
+    <div className="flex items-baseline gap-3 border-b border-slate-50 pb-3 last:border-0 last:pb-0">
+      <span className="w-40 shrink-0 text-sm font-black text-theme-dark sm:w-48">{label}</span>
+      <span className="text-slate-300">:</span>
+      <span className="flex-1 text-sm font-bold text-slate-700">{value}</span>
     </div>
   );
 }
