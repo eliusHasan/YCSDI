@@ -1,4 +1,4 @@
-import { BadgeCheck, Loader2, Search, ShieldCheck, ShieldX } from "lucide-react";
+import { BadgeCheck, Loader2, Search, ShieldCheck, ShieldX, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { publicVerifyApi, type VerifyResponse } from "../../services/api";
@@ -98,15 +98,28 @@ export function VerifyPage() {
                     aria-hidden="true"
                     className="pointer-events-none select-none absolute left-1/2 top-1/2 w-2/3 max-w-sm -translate-x-1/2 -translate-y-1/2 opacity-[0.05]"
                   />
-                  <div className="relative space-y-3.5">
-                    <Row label="Name of the student" value={data.student.fullName} />
-                    <Row label="Roll No" value={data.rollNo} />
-                    <Row label="Registration No" value={data.registrationNo} />
-                    <Row label="Institution" value={data.institute.name} />
-                    <Row label="Course Name" value={data.course.title} />
-                    <Row label="Course Duration" value={data.course.duration ?? "—"} />
-                    <Row label="Session" value={data.session ?? "—"} />
-                    <Row label="Final GPA" value={data.result?.cgpa != null ? data.result.cgpa.toFixed(2) : "—"} />
+                  <div className="relative grid gap-8 md:grid-cols-[170px_1fr] md:items-start">
+                    <div className="mx-auto md:mx-0">
+                      <div className="h-[170px] w-[170px] overflow-hidden rounded-3xl border-4 border-slate-50 bg-slate-100 shadow-inner">
+                        {data.student.photoUrl ? (
+                          <img src={data.student.photoUrl} alt={data.student.fullName} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-300">
+                            <User size={48} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-3.5">
+                      <Row label="Name of the student" value={data.student.fullName} />
+                      <Row label="Roll No" value={data.rollNo} />
+                      <Row label="Registration No" value={data.registrationNo} />
+                      <Row label="Institution" value={data.institute.name} />
+                      <Row label="Course Name" value={data.course.title} />
+                      <Row label="Course Duration" value={data.course.duration ?? "—"} />
+                      <Row label="Session" value={data.session ?? "—"} />
+                      <Row label="Final GPA" value={data.result?.cgpa != null ? data.result.cgpa.toFixed(2) : "—"} />
+                    </div>
                   </div>
                 </div>
               </div>
