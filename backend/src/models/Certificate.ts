@@ -38,6 +38,16 @@ export const Certificate = model<ICertificate>("Certificate", certificateSchema)
 export async function generateCertificateNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `YCSDI-CERT-${year}-`;
-  const count = await Certificate.countDocuments({ certificateNumber: { $regex: `^${prefix}` } });
-  return `${prefix}${(count + 1).toString().padStart(4, "0")}`;
+  const latest = await Certificate.findOne({ certificateNumber: { $regex: `^${prefix}` } })
+    .sort({ certificateNumber: -1 })
+    .select("certificateNumber")
+    .lean();
+
+  let seq = 1;
+  if (latest?.certificateNumber) {
+    const parsed = Number.parseInt(latest.certificateNumber.slice(prefix.length), 10);
+    if (Number.isFinite(parsed)) seq = parsed + 1;
+  }
+
+  return `${prefix}${seq.toString().padStart(4, "0")}`;
 }

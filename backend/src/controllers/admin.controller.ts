@@ -32,6 +32,10 @@ const ADMIN_EDITABLE_FIELDS = [
   "banned",
 ] as const;
 
+function isDuplicateKeyError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === 11000;
+}
+
 export class AdminController {
   static async getAllStudents(_req: Request, res: Response) {
     const students = await Student.find()
@@ -115,24 +119,36 @@ export class AdminController {
       student.userId = user._id as typeof student.userId;
       await student.save();
 
-      // Allocate unique roll & registration numbers per enrollment.
-      const nextNumbers = await generateRollAndRegistrationSequence((enrollments as ApprovalEnrollmentInput[]).length);
-      const enrollmentDocs = await Enrollment.insertMany(
-        (enrollments as ApprovalEnrollmentInput[]).map((e, i) => {
-          const course = courseById.get(e.courseId)!;
-          const isPreferredCourse = student.preferredCourseId?.toString() === e.courseId;
-          return {
-            studentId: student._id,
-            courseId: e.courseId,
-            instituteId: institute._id,
-            courseTitle: course.title,
-            courseDuration: isPreferredCourse && student.courseDuration ? student.courseDuration : course.duration,
-            session: e.session ?? session ?? student.session ?? undefined,
-            rollNo: nextNumbers[i].rollNo,
-            registrationNo: nextNumbers[i].registrationNo,
-          };
-        }),
-      );
+      // Allocate unique roll & registration numbers per enrollment. The unique
+      // indexes are the source of truth; retries handle concurrent approvals.
+      let enrollmentDocs: unknown[] | null = null;
+      let lastEnrollmentError: unknown = null;
+      for (let attempt = 0; attempt < 6 && !enrollmentDocs; attempt += 1) {
+        const nextNumbers = await generateRollAndRegistrationSequence((enrollments as ApprovalEnrollmentInput[]).length);
+        try {
+          enrollmentDocs = await Enrollment.insertMany(
+            (enrollments as ApprovalEnrollmentInput[]).map((e, i) => {
+              const course = courseById.get(e.courseId)!;
+              const isPreferredCourse = student.preferredCourseId?.toString() === e.courseId;
+              return {
+                studentId: student._id,
+                courseId: e.courseId,
+                instituteId: institute._id,
+                courseTitle: course.title,
+                courseDuration: isPreferredCourse && student.courseDuration ? student.courseDuration : course.duration,
+                session: e.session ?? session ?? student.session ?? undefined,
+                rollNo: nextNumbers[i].rollNo,
+                registrationNo: nextNumbers[i].registrationNo,
+              };
+            }),
+          );
+        } catch (error) {
+          lastEnrollmentError = error;
+          if (!isDuplicateKeyError(error)) throw error;
+          await Enrollment.deleteMany({ studentId: student._id });
+        }
+      }
+      if (!enrollmentDocs) throw lastEnrollmentError ?? new Error("Could not allocate roll/registration numbers");
 
       const populated = await Student.findById(student._id)
         .populate("instituteId", "name code")

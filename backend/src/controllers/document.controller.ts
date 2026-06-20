@@ -27,6 +27,10 @@ const MODEL_BY_TYPE: Record<DocType, Model<any>> = {
   certificate: Certificate,
 };
 
+function isDuplicateKeyError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === 11000;
+}
+
 interface PopulatedEnrollment {
   _id: unknown;
   courseTitle?: string;
@@ -157,7 +161,15 @@ export class DocumentController {
       };
     }
 
-    await enrollment.save();
+    try {
+      await enrollment.save();
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        res.status(409).json({ message: "Roll or registration number already exists" });
+        return;
+      }
+      throw error;
+    }
     const populated = await Enrollment.findById(enrollment._id)
       .populate("courseId", "title slug imageUrl duration category subjects")
       .populate("instituteId", "name code");
@@ -258,16 +270,8 @@ export class DocumentController {
     }
     const issuedAt = new Date();
     const exam = examDate ? new Date(examDate) : issuedAt;
-    const certificateNumber = type === "certificate" ? await generateCertificateNumber() : undefined;
 
     try {
-      const built = await DocumentController.buildPdf(type, enrollment, serialNo, {
-        rollNo: rollNo!,
-        registrationNo: registrationNo!,
-        exam,
-        issuedDate: issuedAt,
-        certificateNumber,
-      });
       const base = {
         enrollmentId: enrollment._id,
         studentId: s._id,
@@ -276,13 +280,45 @@ export class DocumentController {
         serialNo,
         issuedByAdminId: req.user._id,
         issuedAt,
-        pdfUrl: built.pdfUrl,
       };
       let doc;
-      if (type === "registration") doc = await RegistrationCard.create(base);
-      else if (type === "admit") doc = await AdmitCard.create({ ...base, examDate: examDate ? exam : undefined });
-      else if (type === "marksheet") doc = await Marksheet.create({ ...base, ...built.marksheet });
-      else doc = await Certificate.create({ ...base, certificateNumber, ...built.certificate });
+      if (type === "certificate") {
+        let lastError: unknown = null;
+        for (let attempt = 0; attempt < 6 && !doc; attempt += 1) {
+          const certificateNumber = await generateCertificateNumber();
+          const built = await DocumentController.buildPdf(type, enrollment, serialNo, {
+            rollNo: rollNo!,
+            registrationNo: registrationNo!,
+            exam,
+            issuedDate: issuedAt,
+            certificateNumber,
+          });
+          try {
+            doc = await Certificate.create({
+              ...base,
+              pdfUrl: built.pdfUrl,
+              certificateNumber,
+              ...built.certificate,
+            });
+          } catch (error) {
+            lastError = error;
+            if (isDuplicateKeyError(error)) continue;
+            throw error;
+          }
+        }
+        if (!doc) throw lastError ?? new Error("Could not allocate a certificate number");
+      } else {
+        const built = await DocumentController.buildPdf(type, enrollment, serialNo, {
+          rollNo: rollNo!,
+          registrationNo: registrationNo!,
+          exam,
+          issuedDate: issuedAt,
+        });
+        if (type === "registration") doc = await RegistrationCard.create({ ...base, pdfUrl: built.pdfUrl });
+        else if (type === "admit") {
+          doc = await AdmitCard.create({ ...base, pdfUrl: built.pdfUrl, examDate: examDate ? exam : undefined });
+        } else doc = await Marksheet.create({ ...base, pdfUrl: built.pdfUrl, ...built.marksheet });
+      }
 
       if (type === "marksheet") {
         await Enrollment.updateOne({ _id: enrollment._id }, { "result.published": true });
