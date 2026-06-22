@@ -337,6 +337,10 @@ export interface AdminStudentUpdatePayload {
   mobileNumber?: string;
   email?: string;
   message?: string;
+  courseDuration?: string;
+  session?: string;
+  preferredInstituteId?: string | null;
+  preferredCourseId?: string | null;
   status?: StudentStatus;
   banned?: boolean;
 }
@@ -405,6 +409,11 @@ export const adminApi = {
   rejectStudent: (studentId: string) => api.post(`/admin/students/${studentId}/reject`),
   patchStudent: (studentId: string, payload: AdminStudentUpdatePayload) =>
     api.patch<Student>(`/admin/students/${studentId}`, payload),
+  updateStudentPhoto: (studentId: string, file: File) => {
+    const fd = new FormData();
+    fd.append("photo", file);
+    return api.post<Student>(`/admin/students/${studentId}/photo`, fd);
+  },
   deleteStudent: (studentId: string) =>
     api.delete<{ message: string }>(`/admin/students/${studentId}`),
 };

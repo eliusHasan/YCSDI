@@ -28,9 +28,15 @@ const ADMIN_EDITABLE_FIELDS = [
   "mobileNumber",
   "email",
   "message",
+  "courseDuration",
+  "session",
+  "preferredInstituteId",
+  "preferredCourseId",
   "status",
   "banned",
 ] as const;
+
+const REF_FIELDS = ["preferredInstituteId", "preferredCourseId"];
 
 function isDuplicateKeyError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11000;
@@ -208,9 +214,37 @@ export class AdminController {
 
     for (const key of ADMIN_EDITABLE_FIELDS) {
       if (body[key] !== undefined) {
-        (student as unknown as Record<string, unknown>)[key] = body[key];
+        // Empty reference ids must be cleared (null), not cast from "".
+        const value = REF_FIELDS.includes(key) && !body[key] ? null : body[key];
+        (student as unknown as Record<string, unknown>)[key] = value;
       }
     }
+    await student.save();
+
+    const populated = await Student.findById(student._id)
+      .populate("instituteId", "name code")
+      .populate("userId", "userId role");
+    res.status(200).json(populated);
+  }
+
+  /** Admin: replace a student's passport photo (multipart upload to Cloudinary). */
+  static async updateStudentPhoto(req: Request, res: Response) {
+    const { studentId } = req.params;
+    if (!isValidObjectId(studentId)) {
+      res.status(400).json({ message: "Invalid student id" });
+      return;
+    }
+    const file = req.file as (Express.Multer.File & { path?: string }) | undefined;
+    if (!file?.path) {
+      res.status(400).json({ message: "Photo file is required" });
+      return;
+    }
+    const student = await Student.findById(studentId);
+    if (!student) {
+      res.status(404).json({ message: "Student not found" });
+      return;
+    }
+    student.photoUrl = file.path;
     await student.save();
 
     const populated = await Student.findById(student._id)

@@ -20,13 +20,15 @@ import {
   ShieldCheck,
   Trash2,
   Undo2,
+  Upload,
   User as UserIcon,
   Users,
   X,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type ChangeEvent, type ComponentType, type FormEvent, type ReactNode } from "react";
 import { PAGE_SIZE, Pagination } from "../../components/ui/Pagination";
+import { PhotoCropModal } from "../../components/ui/PhotoCropModal";
 import {
   adminApi,
   instituteApi,
@@ -71,6 +73,10 @@ interface EditFormState {
   mobileNumber: string;
   email: string;
   message: string;
+  courseDuration: string;
+  session: string;
+  preferredInstituteId: string;
+  preferredCourseId: string;
 }
 
 function studentToEditForm(s: Student): EditFormState {
@@ -87,6 +93,10 @@ function studentToEditForm(s: Student): EditFormState {
     mobileNumber: s.mobileNumber,
     email: s.email ?? "",
     message: s.message ?? "",
+    courseDuration: s.courseDuration ?? "",
+    session: s.session ?? "",
+    preferredInstituteId: s.preferredInstituteId?._id ?? "",
+    preferredCourseId: s.preferredCourseId?._id ?? "",
   };
 }
 
@@ -114,6 +124,9 @@ export function AdminDashboard() {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
+  const [editCropSrc, setEditCropSrc] = useState<string | null>(null);
 
   const [viewStudent, setViewStudent] = useState<Student | null>(null);
 
@@ -171,6 +184,30 @@ export function AdminDashboard() {
     setEditStudent(student);
     setEditForm(studentToEditForm(student));
     setEditError(null);
+    setEditPhotoFile(null);
+    setEditPhotoPreview(null);
+    setEditCropSrc(null);
+  };
+
+  const handleEditFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setEditCropSrc(URL.createObjectURL(file));
+    e.target.value = "";
+  };
+
+  const handleEditCropConfirm = (blob: Blob) => {
+    setEditPhotoFile(new File([blob], "passport-photo.jpg", { type: "image/jpeg" }));
+    setEditPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(blob);
+    });
+    if (editCropSrc) URL.revokeObjectURL(editCropSrc);
+    setEditCropSrc(null);
+  };
+
+  const handleEditCropCancel = () => {
+    if (editCropSrc) URL.revokeObjectURL(editCropSrc);
+    setEditCropSrc(null);
   };
 
   const handleEditSave = async (e: FormEvent<HTMLFormElement>) => {
@@ -191,9 +228,14 @@ export function AdminDashboard() {
       mobileNumber: editForm.mobileNumber,
       email: editForm.email || undefined,
       message: editForm.message || undefined,
+      courseDuration: editForm.courseDuration || undefined,
+      session: editForm.session || undefined,
+      preferredInstituteId: editForm.preferredInstituteId || null,
+      preferredCourseId: editForm.preferredCourseId || null,
     };
     try {
       await adminApi.patchStudent(editStudent._id, payload);
+      if (editPhotoFile) await adminApi.updateStudentPhoto(editStudent._id, editPhotoFile);
       setEditStudent(null);
       setEditForm(null);
       await loadAll();
@@ -673,6 +715,20 @@ export function AdminDashboard() {
               </div>
 
               <form onSubmit={handleEditSave} className="space-y-4">
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div className="h-24 w-[76px] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                    <img src={editPhotoPreview ?? editStudent.photoUrl} alt="" className="h-full w-full object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Passport Photo</p>
+                    <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-theme-soft/10 border border-theme-soft/30 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-theme-soft hover:bg-theme-soft/20 transition-colors">
+                      <Upload size={12} /> Change Photo
+                      <input type="file" accept="image/*" className="hidden" onChange={handleEditFile} />
+                    </label>
+                    <p className="mt-1.5 text-[9px] font-bold text-white/30">You can crop &amp; rotate after selecting.</p>
+                  </div>
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-4">
                   <EditField label="Full Name *" value={editForm.fullName} onChange={(v) => setEditForm({ ...editForm, fullName: v })} required />
                   <EditField label="Father's Name *" value={editForm.fatherName} onChange={(v) => setEditForm({ ...editForm, fatherName: v })} required />
@@ -702,6 +758,40 @@ export function AdminDashboard() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <EditField label="Mobile *" value={editForm.mobileNumber} onChange={(v) => setEditForm({ ...editForm, mobileNumber: v })} required />
                   <EditField label="Email" type="email" value={editForm.email} onChange={(v) => setEditForm({ ...editForm, email: v })} />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Preferred Institute</label>
+                    <select
+                      value={editForm.preferredInstituteId}
+                      onChange={(e) => setEditForm({ ...editForm, preferredInstituteId: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-theme-soft/50 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="" className="bg-theme-dark">— None —</option>
+                      {institutes.map((i) => (
+                        <option key={i._id} value={i._id} className="bg-theme-dark">{i.code} — {i.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Preferred Course</label>
+                    <select
+                      value={editForm.preferredCourseId}
+                      onChange={(e) => setEditForm({ ...editForm, preferredCourseId: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-theme-soft/50 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="" className="bg-theme-dark">— None —</option>
+                      {courses.map((c) => (
+                        <option key={c._id} value={c._id} className="bg-theme-dark">{c.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <EditField label="Course Duration" value={editForm.courseDuration} onChange={(v) => setEditForm({ ...editForm, courseDuration: v })} />
+                  <EditField label="Session" value={editForm.session} onChange={(v) => setEditForm({ ...editForm, session: v })} />
                 </div>
 
                 <div className="space-y-1">
@@ -863,6 +953,10 @@ export function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {editCropSrc && (
+        <PhotoCropModal src={editCropSrc} onCancel={handleEditCropCancel} onConfirm={handleEditCropConfirm} />
       )}
     </div>
   );
