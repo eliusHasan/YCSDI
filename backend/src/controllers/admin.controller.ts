@@ -221,6 +221,16 @@ export class AdminController {
     }
     await student.save();
 
+    // courseDuration / session are duplicated onto each Enrollment, which is the
+    // source of truth documents render from. Propagate the student-level edits so
+    // regenerated documents reflect them (in practice one enrollment per student).
+    const enrollmentSync: Record<string, string> = {};
+    if (body.courseDuration !== undefined) enrollmentSync.courseDuration = student.courseDuration ?? "";
+    if (body.session !== undefined) enrollmentSync.session = student.session ?? "";
+    if (Object.keys(enrollmentSync).length > 0) {
+      await Enrollment.updateMany({ studentId: student._id }, { $set: enrollmentSync });
+    }
+
     const populated = await Student.findById(student._id)
       .populate("instituteId", "name code")
       .populate("userId", "userId role");
