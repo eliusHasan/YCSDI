@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState, ChangeEvent, FormEvent } from "react";
 import { publicCourseApi, publicInstituteApi, studentApi, type Course, type PublicInstitute } from "../../services/api";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { CourseDurationSelect } from "../../components/ui/CourseDurationSelect";
 import { PhotoCropModal } from "../../components/ui/PhotoCropModal";
 import { getDistricts, getUpazilas } from "../../lib/bdAddress";
 
@@ -355,14 +356,12 @@ export function RegistrationPage() {
                   <div className="space-y-1">
                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Course Duration</label>
                     <div className="relative group/input">
-                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors" size={16} />
-                      <input
-                        type="text"
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within/input:text-theme-soft transition-colors z-10" size={16} />
+                      <CourseDurationSelect
                         name="courseDuration"
                         value={courseDuration}
-                        onChange={(e) => setCourseDuration(e.target.value)}
-                        placeholder="e.g. 6 Months"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner"
+                        onChange={setCourseDuration}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold focus:outline-none focus:border-theme-soft/50 focus:bg-white/10 transition-all shadow-inner appearance-none cursor-pointer"
                       />
                     </div>
                   </div>

@@ -35,6 +35,7 @@ import {
   type Student,
 } from "../../services/api";
 import { useAuthStore } from "../../stores/auth";
+import { CourseDurationSelect } from "../../components/ui/CourseDurationSelect";
 
 interface DetailState {
   serial: string;
@@ -58,6 +59,7 @@ interface EditFormState {
   mobileNumber: string;
   email: string;
   message: string;
+  courseDuration: string;
 }
 
 function studentToFormState(s: Student): EditFormState {
@@ -74,6 +76,7 @@ function studentToFormState(s: Student): EditFormState {
     mobileNumber: s.mobileNumber,
     email: s.email ?? "",
     message: s.message ?? "",
+    courseDuration: s.courseDuration ?? "",
   };
 }
 
@@ -196,6 +199,7 @@ export function StaffDashboard() {
       mobileNumber: editForm.mobileNumber,
       email: editForm.email || undefined,
       message: editForm.message || undefined,
+      courseDuration: editForm.courseDuration || undefined,
     };
 
     try {
@@ -418,6 +422,17 @@ export function StaffDashboard() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <EditField label="Mobile *" value={editForm.mobileNumber} onChange={(v) => setEditForm({ ...editForm, mobileNumber: v })} required />
                   <EditField label="Email" type="email" value={editForm.email} onChange={(v) => setEditForm({ ...editForm, email: v })} />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Course Duration</label>
+                    <CourseDurationSelect
+                      value={editForm.courseDuration}
+                      onChange={(v) => setEditForm({ ...editForm, courseDuration: v })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-theme-soft/50 transition-all appearance-none cursor-pointer"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">

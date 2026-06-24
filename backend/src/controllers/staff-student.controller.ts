@@ -17,6 +17,7 @@ const EDITABLE_FIELDS = [
   "mobileNumber",
   "email",
   "message",
+  "courseDuration",
 ] as const;
 
 async function loadStaffProfile(req: Request): Promise<IStaff | null> {
@@ -111,6 +112,15 @@ export class StaffStudentController {
     }
 
     await student.save();
+
+    // courseDuration is duplicated onto each Enrollment, which is what documents
+    // render from. Propagate the edit so regenerated documents reflect it.
+    if (body.courseDuration !== undefined) {
+      await Enrollment.updateMany(
+        { studentId: student._id },
+        { $set: { courseDuration: student.courseDuration ?? "" } },
+      );
+    }
 
     const populated = await Student.findById(student._id).populate("instituteId", "name code");
     res.status(200).json(populated);

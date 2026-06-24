@@ -239,6 +239,7 @@ export interface StaffStudentUpdatePayload {
   mobileNumber?: string;
   email?: string;
   message?: string;
+  courseDuration?: string;
 }
 
 export interface CertificateStudentRef {

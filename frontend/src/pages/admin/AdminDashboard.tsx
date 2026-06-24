@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ChangeEvent, type ComponentType, type FormEvent, type ReactNode } from "react";
 import { PAGE_SIZE, Pagination } from "../../components/ui/Pagination";
+import { CourseDurationSelect } from "../../components/ui/CourseDurationSelect";
 import { PhotoCropModal } from "../../components/ui/PhotoCropModal";
 import {
   adminApi,
@@ -42,21 +43,18 @@ import {
 
 type FilterValue = "all" | "pending" | "approved" | "rejected";
 
+// Approval only collects login credentials now. The institute, course and
+// session come from what the student chose at registration (editable via the
+// Edit modal), so they are no longer re-entered here.
 interface ApprovalFormState {
   userId: string;
   password: string;
-  instituteId: string;
-  session: string;
-  courseIds: string[];
 }
 
 function buildEmptyApproval(prefillUserId: string): ApprovalFormState {
   return {
     userId: prefillUserId,
     password: "",
-    instituteId: "",
-    session: "",
-    courseIds: [],
   };
 }
 
@@ -172,10 +170,7 @@ export function AdminDashboard() {
 
   const handleApproveClick = (student: Student) => {
     setSelectedStudent(student);
-    const prefilled = buildEmptyApproval(student.registrationId);
-    if (student.preferredInstituteId?._id) prefilled.instituteId = student.preferredInstituteId._id;
-    if (student.preferredCourseId?._id) prefilled.courseIds = [student.preferredCourseId._id];
-    setApproval(prefilled);
+    setApproval(buildEmptyApproval(student.registrationId));
     setError(null);
     setShowModal(true);
   };
@@ -246,23 +241,14 @@ export function AdminDashboard() {
     }
   };
 
-  const toggleCourse = (id: string) => {
-    setApproval((a) => ({
-      ...a,
-      courseIds: a.courseIds.includes(id) ? a.courseIds.filter((x) => x !== id) : [...a.courseIds, id],
-    }));
-  };
-
   const handleApproveSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedStudent) return;
 
-    if (!approval.instituteId) {
-      setError("Select an institute");
-      return;
-    }
-    if (approval.courseIds.length === 0) {
-      setError("Select at least one course");
+    const instituteId = selectedStudent.preferredInstituteId?._id;
+    const courseId = selectedStudent.preferredCourseId?._id;
+    if (!instituteId || !courseId) {
+      setError("This student is missing a preferred institute or course. Set them via Edit, then approve.");
       return;
     }
 
@@ -272,9 +258,9 @@ export function AdminDashboard() {
       const payload: ApprovalPayload = {
         userId: approval.userId,
         password: approval.password,
-        instituteId: approval.instituteId,
-        session: approval.session || undefined,
-        enrollments: approval.courseIds.map((courseId) => ({ courseId })),
+        instituteId,
+        session: selectedStudent.session || undefined,
+        enrollments: [{ courseId }],
       };
       await adminApi.approveStudent(selectedStudent._id, payload);
       setShowModal(false);
@@ -316,8 +302,6 @@ export function AdminDashboard() {
       alert(err.response?.data?.message ?? "Delete failed");
     }
   };
-
-  const publishedCourses = courses;
 
   const filteredStudents = students.filter((s) => {
     const matchesFilter = filter === "all" || s.status === filter;
@@ -555,81 +539,35 @@ export function AdminDashboard() {
             </div>
 
             <form onSubmit={handleApproveSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1 flex items-center gap-1.5">
-                  <Building2 size={11} /> Institute *
-                </label>
-                <select
-                  value={approval.instituteId}
-                  onChange={(e) => setApproval({ ...approval, instituteId: e.target.value })}
-                  required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-theme-soft/50 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="" className="bg-theme-dark">Select institute…</option>
-                  {institutes.map((i) => (
-                    <option key={i._id} value={i._id} className="bg-theme-dark">
-                      {i.code} — {i.name}
-                    </option>
-                  ))}
-                </select>
-                {institutes.length === 0 && (
-                  <p className="text-[10px] font-bold text-amber-400 ml-1 mt-1">No institutes. Create one in Institutes.</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1 flex items-center gap-1.5">
-                  <BookOpen size={11} /> Enroll in courses *
-                </label>
-                {publishedCourses.length === 0 ? (
-                  <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-widest text-center">
-                    No published courses. Publish one in Courses.
-                  </div>
-                ) : (
-                  <div className="grid sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto p-3 rounded-xl bg-white/5 border border-white/10">
-                    {publishedCourses.map((course) => {
-                      const checked = approval.courseIds.includes(course._id);
-                      return (
-                        <button
-                          type="button"
-                          key={course._id}
-                          onClick={() => toggleCourse(course._id)}
-                          className={`flex items-start gap-3 p-3 rounded-lg border text-left transition-all ${
-                            checked
-                              ? "bg-theme-soft/10 border-theme-soft/40 text-white"
-                              : "bg-white/0 border-white/5 text-white/40 hover:bg-white/5"
-                          }`}
-                        >
-                          <div
-                            className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border ${
-                              checked ? "bg-theme-soft border-theme-soft text-theme-dark" : "border-white/20"
-                            }`}
-                          >
-                            {checked && <CheckCircle2 size={12} />}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-black uppercase tracking-widest truncate">{course.title}</p>
-                            <p className="text-[10px] font-bold text-white/40 truncate">
-                              {course.offerPrice ?? course.price} BDT
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Session (applies to all)</label>
-                <input
-                  type="text"
-                  value={approval.session}
-                  onChange={(e) => setApproval({ ...approval, session: e.target.value })}
-                  placeholder="2025-26 (optional)"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold placeholder:text-white/10 focus:outline-none focus:border-theme-soft/50 transition-all"
+              {/* Enrollment details come from the student's registration choices.
+                  To change them, close this and use the Edit button. */}
+              <div className="rounded-xl bg-white/5 border border-white/10 divide-y divide-white/5">
+                <ApprovalSummaryRow
+                  icon={Building2}
+                  label="Institute"
+                  value={
+                    selectedStudent.preferredInstituteId
+                      ? `${selectedStudent.preferredInstituteId.code} — ${selectedStudent.preferredInstituteId.name}`
+                      : null
+                  }
+                />
+                <ApprovalSummaryRow
+                  icon={BookOpen}
+                  label="Course"
+                  value={selectedStudent.preferredCourseId?.title ?? null}
+                />
+                <ApprovalSummaryRow
+                  icon={CalendarDays}
+                  label="Session"
+                  value={selectedStudent.session || "—"}
                 />
               </div>
+
+              {(!selectedStudent.preferredInstituteId || !selectedStudent.preferredCourseId) && (
+                <p className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-widest text-center">
+                  Missing institute or course. Close this and set them via Edit before approving.
+                </p>
+              )}
 
               <div className="grid sm:grid-cols-2 gap-4 p-4 rounded-xl bg-theme-soft/5 border border-theme-soft/20">
                 <div className="space-y-1">
@@ -677,7 +615,7 @@ export function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={actionLoading || institutes.length === 0 || publishedCourses.length === 0}
+                  disabled={actionLoading || !selectedStudent.preferredInstituteId || !selectedStudent.preferredCourseId}
                   className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-theme-soft text-theme-dark text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
@@ -790,7 +728,14 @@ export function AdminDashboard() {
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <EditField label="Course Duration" value={editForm.courseDuration} onChange={(v) => setEditForm({ ...editForm, courseDuration: v })} />
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-theme-soft ml-1">Course Duration</label>
+                    <CourseDurationSelect
+                      value={editForm.courseDuration}
+                      onChange={(v) => setEditForm({ ...editForm, courseDuration: v })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-theme-soft/50 transition-all appearance-none cursor-pointer"
+                    />
+                  </div>
                   <EditField label="Session" value={editForm.session} onChange={(v) => setEditForm({ ...editForm, session: v })} />
                 </div>
 
@@ -992,6 +937,26 @@ function DetailRow({ icon: Icon, label, value }: DetailRowProps) {
         <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">{label}</p>
         <p className="text-sm font-bold text-white/90 break-words">{value}</p>
       </div>
+    </div>
+  );
+}
+
+interface ApprovalSummaryRowProps {
+  icon: ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: string | null;
+}
+
+function ApprovalSummaryRow({ icon: Icon, label, value }: ApprovalSummaryRowProps) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <Icon size={14} className="text-white/30 shrink-0" />
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 w-20 shrink-0">{label}</p>
+      {value ? (
+        <p className="text-sm font-bold text-white/90 truncate">{value}</p>
+      ) : (
+        <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Not set</p>
+      )}
     </div>
   );
 }
