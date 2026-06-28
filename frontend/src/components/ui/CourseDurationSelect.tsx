@@ -2,7 +2,7 @@
 // public registration form and the admin/staff student editors so the value is
 // always one of a fixed set (instead of free text that drifts: "1 Year" vs
 // "1 Years").
-export const COURSE_DURATIONS = ["3 Months", "6 Months", "1 Year", "2 Years", "3 Years", "5 Years"] as const;
+export const COURSE_DURATIONS = ["3 Months", "6 Months", "1 Year", "2 Years", "3 Years", "4 Years"] as const;
 
 interface CourseDurationSelectProps {
   value: string;
